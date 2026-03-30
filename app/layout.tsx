@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Homeschool Plus — Coming Soon",
-  description: "Education of the Future. Homeschool Plus is coming soon.",
+  title: "Homeschool+ — Education of the Future",
+  description:
+    "A Von der Becke Academy 501(c)(3) endeavour. Revolutionary K-12 education combining martial arts, robotics, AI, and community-based learning pods. $200/month.",
 };
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body suppressHydrationWarning className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
