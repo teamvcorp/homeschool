@@ -1,25 +1,247 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ==========================================================================
+   THE VA SCHOOL — DESIGN TOKENS
+   ==========================================================================
+   Tailwind v4 is CSS-first: there is NO tailwind.config file, and there should
+   not be one. Every token declared in `@theme` below automatically generates
+   the matching utilities — `--color-navy-900` gives you `bg-navy-900`,
+   `text-navy-900`, `border-navy-900`, and the CSS var `--color-navy-900` for
+   arbitrary values.
+
+   Palette rationale: the school crest (public/vaLogoRevamp.png) is a
+   gold-framed shield with four quadrants — red/orange, green, blue, gold.
+   Navy + gold carry the institutional chrome (gold is the crest's frame color,
+   so the logo sits on navy naturally, and it matches the look of the Iowa DE
+   accreditation documents). The four quadrant hues become a controlled
+   CATEGORY palette, because the source material is full of four-way sets:
+   4 cohorts, 4 career pathways, 4 program areas.
+
+   Accessibility rule: crest hues are identity, never the only signal. Always
+   pair a category color with an icon or a text label so the distinction
+   survives colorblindness and grayscale printing.
+   ========================================================================== */
+
+@theme {
+  /* --- Navy: institutional base -----------------------------------------
+     700/800/900 are the text-safe steps. 50–200 are wash/fill only — never
+     put body copy on them in navy lighter than 600. */
+  --color-navy-50: #f1f5fa;
+  --color-navy-100: #dce5f0;
+  --color-navy-200: #c3d3e7;
+  --color-navy-300: #9bb3d2;
+  --color-navy-400: #6c8db6;
+  --color-navy-500: #456a98;
+  --color-navy-600: #2f5688;
+  --color-navy-700: #24456f;
+  --color-navy-800: #1b3557;
+  --color-navy-900: #12263f;
+  --color-navy-950: #0a1a2f;
+
+  /* --- Gold: accent, drawn from the crest's frame -----------------------
+     CRITICAL: gold text on a light background MUST use gold-600 (~4.7:1).
+     gold-300/400 on white fails AA — those steps are for fills, borders, and
+     for gold text on navy (gold-300 on navy-900 is ~8.5:1). */
+  --color-gold-50: #fdf7e7;
+  --color-gold-100: #fbebc4;
+  --color-gold-200: #f7dc96;
+  --color-gold-300: #f2c14e;
+  --color-gold-400: #e0a81b;
+  --color-gold-500: #c68a0c;
+  --color-gold-600: #a9760a;
+  --color-gold-700: #855c08;
+  --color-gold-800: #63450a;
+  --color-gold-900: #45300a;
+
+  /* --- Crest category hues ----------------------------------------------
+     The 600 step of each is the text-safe one (all clear 4.5:1 on white).
+     50/100 are fills. Assigned in lib/site.ts, not hardcoded in components. */
+  --color-crest-red-50: #fdf0ed;
+  --color-crest-red-100: #fadcd5;
+  --color-crest-red-500: #e0472a;
+  --color-crest-red-600: #c0341a;
+  --color-crest-red-700: #9c2a15;
+
+  --color-crest-green-50: #edf8f1;
+  --color-crest-green-100: #d2eedc;
+  --color-crest-green-500: #229b4c;
+  --color-crest-green-600: #1b7a3d;
+  --color-crest-green-700: #145e2f;
+
+  --color-crest-blue-50: #edf3fb;
+  --color-crest-blue-100: #d3e2f5;
+  --color-crest-blue-500: #1a66b8;
+  --color-crest-blue-600: #14508f;
+  --color-crest-blue-700: #0f3e6f;
+
+  /* crest-gold is the gold ramp — aliased so category code reads consistently */
+  --color-crest-gold-50: #fdf7e7;
+  --color-crest-gold-100: #fbebc4;
+  --color-crest-gold-500: #c68a0c;
+  --color-crest-gold-600: #a9760a;
+  --color-crest-gold-700: #855c08;
+
+  /* --- Ink & neutrals ---------------------------------------------------
+     ink-subtle is the LIGHTEST permissible text color on white (~4.6:1).
+     Anything lighter than this for text is a bug. */
+  --color-ink: #1e2a38;
+  --color-ink-muted: #4a5a6e;
+  --color-ink-subtle: #6b7c91;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f9fc;
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
 }
 
+/* Font tokens need `inline` because they reference vars that next/font sets on
+   <html> at runtime — a non-inline @theme would resolve them too early. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, Cambria, serif;
 }
 
-/* Smooth scrolling for anchor links */
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
 html {
+  /* Next 16 no longer overrides scroll-behavior during router navigation, so
+     this CSS alone is not enough — <html> also carries
+     data-scroll-behavior="smooth" (set in app/layout.tsx). Both are required. */
   scroll-behavior: smooth;
+  /* Clears the fixed header when jumping to an in-page anchor. */
   scroll-padding-top: 5rem;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  /* NOTE: there is deliberately no `font-family` here. Tailwind's preflight
+     wires --font-sans onto <html>, and a font-family on body would override
+     that inherited value — which is exactly the bug that made this site render
+     in Arial instead of Geist for its whole life. Do not add one back. */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headings default to the serif display face. */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif);
+  color: var(--color-navy-900);
+  text-wrap: balance;
+}
+
+/* Visible, consistent focus ring on every interactive element. Uses
+   :focus-visible so mouse users don't see it but keyboard users always do. */
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ==========================================================================
+   ANIMATION
+   Moved here out of the inline <style> tag that EnrollLink.tsx used to inject,
+   and gated behind prefers-reduced-motion.
+   ========================================================================== */
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   PRINT
+   The accreditation packet at /accreditation/[doc] is meant to be printed to
+   PDF by an Iowa DE reviewer, so print is a real output target, not an
+   afterthought. `.no-print` is the escape hatch for site chrome.
+   ========================================================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  html {
+    font-size: 11pt;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  /* Shadows and tints cost toner and add nothing on paper. */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Keep headings with the content that follows them. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+    color: #000;
+  }
+
+  /* Never split a table row or a callout across pages. */
+  tr,
+  blockquote,
+  .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Spell out link targets so a printed page stays verifiable. */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #444;
+  }
+
+  @page {
+    margin: 0.75in;
+  }
 }
