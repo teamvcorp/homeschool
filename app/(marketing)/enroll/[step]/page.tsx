@@ -79,6 +79,30 @@ export default async function EnrollStepPage({
   const previous: Route | null =
     index > 0 ? (`/enroll/${ENROLLMENT_STEPS[index - 1].slug}` as Route) : null;
 
+  /**
+   * Does THIS step contain values carried over from the family's previous agreement?
+   *
+   * The sibling flow lands on the student step, which shows none of the carried fields, so
+   * a family clicking "enroll another child" saw an apparently-empty form and concluded the
+   * carry-over had not worked — the reported half of Bug 2. The seeded values were in fact
+   * there, two steps later, unannounced.
+   *
+   * Two conditions, both necessary:
+   *  - the step's schema actually declares one of the seeded keys, so the notice appears on
+   *    the guardian and medical steps and nowhere else;
+   *  - the family has not yet saved this step in this agreement (`completedStep` is still
+   *    below it), so the notice stops once they have reviewed and confirmed the values.
+   *
+   * `seededFields` is recorded on the draft at creation rather than inferred from
+   * `Object.keys(data)`, which would stop being a reliable signal the moment the family
+   * saved anything.
+   */
+  const seededFields = draft.seededFields ?? [];
+  const stepFieldNames = step.schema ? Object.keys(step.schema.shape) : [];
+  const showCarryOverNotice =
+    draft.completedStep < index + 1 &&
+    seededFields.some((field) => stepFieldNames.includes(field));
+
   // Minted server-side because it is HMAC-signed; the client only echoes it back.
   const timestamp = issueFormTimestamp();
 
@@ -131,6 +155,7 @@ export default async function EnrollStepPage({
               timestamp={timestamp}
               acknowledgments={[...ACKNOWLEDGMENT_LIST]}
               previousHref={previous}
+              showCarryOverNotice={showCarryOverNotice}
             />
           )}
         </div>

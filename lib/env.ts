@@ -47,16 +47,41 @@ const schema = z.object({
    */
   SESSION_SECRET: z
     .string()
+    .trim()
     .min(32, "SESSION_SECRET must be at least 32 characters of random data"),
 
   /**
    * Signs enrollment draft cookies and form-issue timestamps. Kept separate from
    * SESSION_SECRET so rotating one does not invalidate the other, and so a leak of
    * the lower-value form secret cannot mint admin sessions.
+   *
+   * ⚠️  `.trim()` IS LOAD-BEARING. A secret pasted into the Vercel dashboard very often
+   * arrives with a trailing newline, and a secret that differs by whitespace between
+   * two environments makes every form served by one deployment fail HMAC verification
+   * at the other. The visitor sees the generic "we could not process that submission"
+   * — indistinguishable from the honeypot bug this file's sibling comments describe.
+   * lib/forms/hmac.ts additionally verifies against the UNtrimmed value so that adding
+   * this trim did not itself invalidate in-flight forms.
    */
   FORM_HMAC_SECRET: z
     .string()
+    .trim()
     .min(32, "FORM_HMAC_SECRET must be at least 32 characters of random data"),
+
+  /**
+   * The PREVIOUS form secret, accepted at verification only, for the duration of a
+   * rotation. Optional and normally unset.
+   *
+   * Without this, rotating FORM_HMAC_SECRET instantly invalidates every form already
+   * served and every draft cookie already issued — every family mid-agreement is
+   * bounced to the start. Set it to the old value, deploy, wait longer than
+   * MAX_FORM_AGE_MS (12h), then remove it.
+   */
+  FORM_HMAC_SECRET_PREVIOUS: z
+    .string()
+    .trim()
+    .min(32, "FORM_HMAC_SECRET_PREVIOUS must be at least 32 characters of random data")
+    .optional(),
 
   /** Transactional email. */
   RESEND_API_KEY: z.string().min(1).optional(),
@@ -156,3 +181,20 @@ export function assertEnv(): Env {
  */
 export const isProduction = process.env.NODE_ENV === "production";
 export const isDevelopment = process.env.NODE_ENV === "development";
+
+/**
+ * The RAW, un-trimmed FORM_HMAC_SECRET exactly as the platform supplied it.
+ *
+ * The one deliberate exception to "never read process.env directly elsewhere", and it
+ * exists for a single purpose: lib/forms/hmac.ts must be able to verify signatures that
+ * were produced BEFORE the `.trim()` above was added. If the production secret carries a
+ * trailing newline, the trim changes the effective key, and without this accessor every
+ * form and draft cookie in flight at deploy time would start failing verification — i.e.
+ * shipping the fix would reproduce the very bug it fixes, once, for everyone mid-form.
+ *
+ * Not part of the validated schema on purpose: it is a compatibility shim, and it should
+ * be deletable in a later release once no pre-trim signature can still be in flight.
+ */
+export function untrimmedFormHmacSecret(): string | undefined {
+  return process.env.FORM_HMAC_SECRET;
+}

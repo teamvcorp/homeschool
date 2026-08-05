@@ -131,7 +131,23 @@ export const APPLICATION_STATUSES = [
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
-/** Which forward transitions are legal from each status. Enforced server-side. */
+/**
+ * Which forward transitions an administrator may select from the status dropdown.
+ * Enforced server-side against the STORED status, not the submitted one.
+ *
+ * ⚠️  NOTE `accepted` CANNOT go to `enrolled` here, and that omission is deliberate.
+ *
+ * `enrolled` means "a student record exists". It is a CONSEQUENCE of promotion, not a label
+ * someone chooses — so only promoteApplicationAction may set it, and it does so itself.
+ *
+ * This was a real production trap: `accepted → enrolled` used to be selectable, an
+ * administrator picked it expecting a student record to appear, no record was created
+ * (only promotion does that), and because the promote form only rendered while the status
+ * was `accepted`, choosing `enrolled` made the form vanish and left the application
+ * permanently unable to produce a student. Removing the transition closes the trap; the
+ * promote action additionally accepts a stuck `enrolled`-without-a-student record so any
+ * application already in that state can still be recovered.
+ */
 export const APPLICATION_TRANSITIONS: Record<
   ApplicationStatus,
   readonly ApplicationStatus[]
@@ -139,7 +155,8 @@ export const APPLICATION_TRANSITIONS: Record<
   submitted: ["intakeScheduled", "declined", "withdrawn"],
   intakeScheduled: ["assessed", "declined", "withdrawn"],
   assessed: ["accepted", "declined", "withdrawn"],
-  accepted: ["enrolled", "declined", "withdrawn"],
+  // No "enrolled" — use the promote action, which creates the student record.
+  accepted: ["declined", "withdrawn"],
   enrolled: ["withdrawn"],
   declined: [],
   withdrawn: [],
@@ -199,6 +216,20 @@ export const STUDENT_STATUSES = [
   "archived",
 ] as const;
 export type StudentStatus = (typeof STUDENT_STATUSES)[number];
+
+/**
+ * Lifecycle of a student's school email address on vaschool.org.
+ *
+ * `pending` is the DEFAULT and the important one: the address is generated and recorded as
+ * soon as a student is enrolled, but it does not exist in Office 365 until someone creates
+ * the mailbox. Until then it must never be treated as deliverable — no automated mail is
+ * sent to a pending address, and the admin UI shows it as not-yet-live.
+ *
+ * `active` is set by an administrator once the Office 365 mailbox is confirmed working.
+ * `disabled` covers a departed student whose mailbox has been closed.
+ */
+export const SCHOOL_EMAIL_STATUSES = ["pending", "active", "disabled"] as const;
+export type SchoolEmailStatus = (typeof SCHOOL_EMAIL_STATUSES)[number];
 
 /* ------------------------------ Partnerships ------------------------------- */
 

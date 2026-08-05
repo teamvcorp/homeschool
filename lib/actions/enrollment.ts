@@ -16,18 +16,20 @@ import {
   loadDraft,
   loadActiveDraft,
   saveDraftStep,
+  deleteDraftRecord,
   retainDraftForSibling,
   idempotencyKeyFor,
   siblingSeed,
+  SIBLING_SEED_MAX_AGE_MS,
 } from "../enrollment/draft";
 import { agreementHash, CONSENT_VERSION } from "../enrollment/agreement";
 import { applicationsCollection } from "../db/collections";
 import { ACKNOWLEDGMENT_KEYS } from "../db/enums";
 import type { EnrollmentApplicationDoc } from "../db/types";
-import { checkPublicFormAbuse } from "../anti-abuse";
+import { checkFormFingerprint, consumeFormRateLimit } from "../anti-abuse";
 import { RATE_LIMITS, consumeRateLimit, hashIdentifier } from "../auth/rate-limit";
 import { getClientIp, getUserAgent } from "../audit";
-import { sendEmail } from "../email/send";
+import { sendEmail, queueEmail } from "../email/send";
 import {
   enrollmentConfirmationEmail,
   newApplicationNotificationEmail,
@@ -42,10 +44,13 @@ import { type ActionState, guardAction, failure, fromZodError } from "./types";
  * system. This is the most exposed surface in the application, so the ordering below
  * is deliberate and should not be rearranged:
  *
- *   abuse checks → schema validation → normalise → persist → notify
+ *   free checks → attempt budget → schema validation → APPLICATION BUDGET → persist → notify
  *
- * Cheap rejections happen before expensive work, and nothing touches the database
- * until the payload has passed a schema.
+ * The one non-obvious part of that order is where the tight rate limit sits. It is
+ * charged AFTER validation, immediately before the write, because a limit charged
+ * before validation gets spent by honest mistakes — see the warning on
+ * consumeFormRateLimit in lib/anti-abuse.ts. The free fingerprint checks and a
+ * generous attempt limiter still come first, so nothing expensive is unmetered.
  *
  * WHAT THESE ACTIONS ARE NOT PERMITTED TO DO
  * Write to `students`, `users`, or any collection the admin area treats as trusted.
@@ -86,6 +91,32 @@ function extractStepFields(
   return out;
 }
 
+/**
+ * Charges the draft-creation counter.
+ *
+ * Shared by BOTH paths that can create a draft — the explicit "Begin enrollment" button and
+ * the implicit `startDraft()` inside a step save. Charging only the explicit path left the
+ * real ceiling at ENROLL_START + ENROLL_STEP per hour, because a cookieless step POST mints
+ * a draft too, and drafts are the storage-exhaustion path.
+ */
+async function consumeDraftStartBudget(): Promise<boolean> {
+  const ip = await getClientIp();
+  if (!ip) {
+    // Never silently skip the limiter when the IP is unknown: on a self-hosted or
+    // differently-proxied deployment that would leave draft creation unbounded. Fall back
+    // to one shared bucket and make the misconfiguration loud.
+    console.warn(
+      "[anti-abuse] no client IP on enroll-start — using a single shared bucket; check that the proxy sets x-forwarded-for",
+    );
+  }
+  const result = await consumeRateLimit(
+    `enroll-start:ip:${hashIdentifier(ip ?? "unknown-proxy-misconfigured")}`,
+    RATE_LIMITS.ENROLL_START_PER_IP.limit,
+    RATE_LIMITS.ENROLL_START_PER_IP.windowSeconds,
+  );
+  return result.allowed;
+}
+
 /* ------------------------------ start / restart ----------------------------- */
 
 /**
@@ -95,15 +126,15 @@ function extractStepFields(
  * requires one agreement per student and a family of three should not retype the same
  * address three times. Student-specific and consent fields are never carried across — each
  * child needs their own medical history, and each agreement needs its own freely-given
- * signature and media-release decision.
+ * signature, media-release decision, and funding election.
  *
  * ⚠️  THIS READS THE *SUBMITTED* DRAFT ON PURPOSE — via loadDraft(), not loadActiveDraft().
  *
  * That is the whole reason submit retains a stripped draft instead of deleting it. The
- * original implementation called discardDraft() on submit, which deleted the record and
- * cleared the cookie, so by the time the family clicked "enroll another child" there was
- * nothing to copy from and this silently seeded an empty object. Sibling pre-fill appeared
- * to be implemented and never once worked.
+ * original implementation deleted the record and cleared the cookie on submit, so by the
+ * time the family clicked "enroll another child" there was nothing to copy from and this
+ * silently seeded an empty object. Sibling pre-fill appeared to be implemented and never
+ * once worked. That is Bug 2.
  */
 export async function startEnrollmentAction(sibling = false): Promise<void> {
   /**
@@ -112,32 +143,60 @@ export async function startEnrollmentAction(sibling = false): Promise<void> {
    * Starting an agreement carries no user input, so there is nothing for a honeypot to
    * catch and nothing for a fill-time floor to measure; applying either here would only
    * create a way to reject a family on their very first click. But this action DOES write
-   * a database record, so without any limit a bot could create unbounded drafts. The cap is
-   * deliberately generous — a family legitimately starting several agreements for several
-   * children in one sitting must never hit it.
+   * a database record, so without any limit a bot could create unbounded drafts.
    */
-  const ip = await getClientIp();
-  if (ip) {
-    const limited = await consumeRateLimit(
-      `enroll-start:ip:${hashIdentifier(ip)}`,
-      RATE_LIMITS.ENROLL_START_PER_IP.limit,
-      RATE_LIMITS.ENROLL_START_PER_IP.windowSeconds,
+  if (!(await consumeDraftStartBudget())) {
+    console.warn("[anti-abuse] enroll-start rate limit hit");
+    /**
+     * MUST NOT be a silent redirect to the page they are already on.
+     *
+     * This action returns void and both call sites are a plain <form action={…}> with no
+     * useActionState, so there is no channel to return a message through. Redirecting to
+     * "/enroll" from "/enroll" made the button look simply dead, and every further click
+     * burned another slot, so it could never recover. Redirecting the SIBLING case to
+     * "/enroll" additionally discarded the carry-over the family had just asked for.
+     *
+     * So: send them back to the page they clicked from, with a flag that renders an
+     * explanation plus the school's phone number and leaves the button there to retry.
+     */
+    redirect(
+      sibling ? ("/enroll/submitted?busy=1" as Route) : ("/enroll?busy=1" as Route),
     );
-    if (!limited.allowed) {
-      console.warn("[anti-abuse] enroll-start rate limit hit");
-      // Deliberately not an error page: send them somewhere useful. The enrollment page
-      // itself carries the school's phone number.
-      redirect("/enroll");
-    }
   }
 
   let seed: Record<string, unknown> = {};
 
-  if (sibling) {
-    const previous = await loadDraft();
-    // siblingSeed is idempotent: the retained draft has already been narrowed to these
-    // fields, so re-filtering is a no-op rather than a second, lossier pass.
-    if (previous) seed = siblingSeed(previous.data);
+  const previous = await loadDraft();
+
+  if (previous) {
+    /**
+     * Seed only from a genuinely just-submitted agreement.
+     *
+     * The freshness window closes the shared-computer case: without it, the retained
+     * cookie let the NEXT person on a library or school-office machine pre-fill the
+     * previous family's address, phone, emergency contact and doctor into their own form.
+     * Sibling enrollment happens in one sitting, so nothing legitimate is lost.
+     */
+    if (sibling && previous.submittedAt) {
+      const age = Date.now() - previous.submittedAt.getTime();
+      if (age <= SIBLING_SEED_MAX_AGE_MS) {
+        // siblingSeed is idempotent: the retained draft has already been narrowed to
+        // these fields, so re-filtering is a no-op rather than a second, lossier pass.
+        seed = siblingSeed(previous.data);
+      } else {
+        console.warn("[enroll] sibling seed skipped — retained draft is past its window");
+      }
+    }
+
+    /**
+     * The old draft is consumed. Delete it now rather than leaving it to a TTL.
+     *
+     * The cookie is about to be overwritten by startDraft(), so the record is unreachable
+     * either way — but "unreachable" is not "gone", and this record holds the guardian's
+     * name, address, phone, email, emergency contact and doctor. There is no purpose in
+     * keeping a second copy once the application record holds all of it.
+     */
+    await deleteDraftRecord(previous.draftId);
   }
 
   await startDraft(seed);
@@ -162,29 +221,51 @@ export async function saveEnrollmentStep(
     if (!step?.schema) return failure("That step does not exist.");
 
     /**
-     * Abuse checks first — before any database work.
+     * 1. Free checks first — no database work.
      *
      * NOTE `enforceMinFillTime` is deliberately absent (defaults to false). A step save
      * must never be rejected for being "too fast": a family using browser autofill can
      * legitimately complete the guardian step in under two seconds, and rejecting them
      * loses an enrollment. The floor is enforced on the final submit instead.
+     *
+     * THIS IS WHERE BUG 1 FIRED. The honeypot was a text input named "company_website"
+     * with a matching label, and Chrome and Edge address-autofill filled it on the
+     * guardian step — the one step with a full address block. Both halves of the fix
+     * matter: the field is now a checkbox (autofill does not tick checkboxes) and the
+     * fill-time floor no longer applies here. See lib/forms/fields.ts.
      */
-    const abuse = await checkPublicFormAbuse(
-      formData,
-      RATE_LIMITS.ENROLL_STEP_PER_IP,
-      "enroll-step",
-    );
-    if (!abuse.ok) return failure(abuse.message ?? "Submission rejected.");
+    const fingerprint = checkFormFingerprint(formData, "enroll-step");
+    if (!fingerprint.ok) {
+      return failure(fingerprint.message ?? "Submission rejected.");
+    }
+
+    // 2. Generous per-IP limit on step saves. Charged before the draft lookup, because a
+    //    step POST is the cheap request an attacker would loop on.
+    const stepBudget = await consumeFormRateLimit("enroll-step", {
+      ipPolicy: RATE_LIMITS.ENROLL_STEP_PER_IP,
+    });
+    if (!stepBudget.ok) return failure(stepBudget.message ?? "Submission rejected.");
 
     /**
-     * Ensure there is an ACTIVE draft to write into.
+     * 3. Ensure there is an ACTIVE draft to write into.
      *
      * Checking the cookie alone is not enough: after a submit the cookie still points at
      * the stripped, submitted carry-over record, and writing student data back into that
      * would resurrect a signed agreement as an editable draft. loadActiveDraft() returns
      * null for a submitted draft, so this starts a clean one instead.
+     *
+     * This path CREATES a draft, so it charges the same budget the "Begin enrollment"
+     * button does — otherwise the effective draft-creation ceiling is the sum of both
+     * limits. A real family passes through here at most once per agreement, so the cap is
+     * unreachable for them.
      */
     if (!(await loadActiveDraft())) {
+      if (!(await consumeDraftStartBudget())) {
+        console.warn("[anti-abuse] enroll-start rate limit hit (implicit, step save)");
+        return failure(
+          "We have received several submissions from your connection recently. Please wait a little while, or call the school and we will help directly.",
+        );
+      }
       await startDraft();
     }
 
@@ -241,6 +322,37 @@ export async function submitEnrollmentAction(
       );
     }
 
+    /**
+     * 1. Free checks. Ordered before the draft lookup so a scripted POST with no valid
+     *    token costs one HMAC and nothing else.
+     *
+     * `enforceMinFillTime` IS enabled here, and ONLY here. That floor is safe at this
+     * point and unsafe on a step save: reaching this action requires passing through the
+     * review page and typing a full legal name, so a sub-two-second submission genuinely
+     * is a script.
+     */
+    const fingerprint = checkFormFingerprint(formData, "enroll-submit", {
+      enforceMinFillTime: true,
+    });
+    if (!fingerprint.ok) {
+      return failure(fingerprint.message ?? "Submission rejected.");
+    }
+
+    /**
+     * 2. Generous ATTEMPT budget, charged before validation.
+     *
+     * Bounds the cost of looping requests at this action (a draft lookup plus a
+     * whole-agreement parse) without ever being the thing that rejects a real family:
+     * 30/hr is many times more attempts than any family makes, including one enrolling
+     * several children and fumbling checkboxes on each.
+     */
+    const attemptBudget = await consumeFormRateLimit("enroll-submit-attempt", {
+      ipPolicy: RATE_LIMITS.ENROLL_SUBMIT_ATTEMPT_PER_IP,
+    });
+    if (!attemptBudget.ok) {
+      return failure(attemptBudget.message ?? "Submission rejected.");
+    }
+
     const draft = await loadDraft();
     if (!draft) {
       return failure(
@@ -249,7 +361,7 @@ export async function submitEnrollmentAction(
     }
 
     /**
-     * Already submitted — almost certainly the back button, or a second click.
+     * 3. Already submitted — almost certainly the back button, or a second click.
      *
      * Handled here rather than falling through: the retained draft has been stripped to
      * just the carry-over fields, so the whole-agreement re-validation below would fail
@@ -259,30 +371,10 @@ export async function submitEnrollmentAction(
     if (draft.submittedAt) redirect("/enroll/submitted");
 
     /**
-     * The final submit is the expensive, irreversible action — it creates an application
-     * and sends email — so it keeps the full check set, including the minimum fill time.
-     *
-     * That floor is safe HERE and unsafe on a step save: reaching this point requires
-     * passing through the review page and typing a full legal name, so a sub-two-second
-     * submission genuinely is a script.
+     * 4. Re-validate EVERYTHING, not just the signature step. The draft has been sitting
+     *    in a database across many requests, and per-step schemas could have been relaxed
+     *    for UX reasons. This is the gate that actually decides what gets stored.
      */
-    const abuse = await checkPublicFormAbuse(
-      formData,
-      RATE_LIMITS.ENROLL_SUBMIT_PER_IP,
-      "enroll-submit",
-      {
-        identifier:
-          typeof draft.data.guardianEmail === "string"
-            ? draft.data.guardianEmail
-            : undefined,
-        enforceMinFillTime: true,
-      },
-    );
-    if (!abuse.ok) return failure(abuse.message ?? "Submission rejected.");
-
-    // Re-validate EVERYTHING, not just the signature step. The draft has been sitting
-    // in a database across many requests, and per-step schemas could have been relaxed
-    // for UX reasons. This is the gate that actually decides what gets stored.
     const signatureFields = extractStepFields(
       { typedName: null, intentAffirmed: null },
       formData,
@@ -302,6 +394,33 @@ export async function submitEnrollmentAction(
     }
 
     const a = parsed.data;
+
+    /**
+     * 5. NOW charge the tight budget — a complete, valid agreement is in hand.
+     *
+     * ⚠️  DO NOT MOVE THIS ABOVE THE safeParse. It used to sit before validation, which
+     * meant every rejected POST spent a slot out of a 6-per-hour budget. A family
+     * enrolling four children who twice forgot the intent checkbox would be locked out on
+     * a genuine, fully-typed agreement and told to phone the school mid-signature — a
+     * false rejection, which is the failure this whole subsystem is meant to avoid.
+     * Charging only for complete applications makes a mistake free and makes the cap count
+     * the thing it is named for.
+     *
+     * The per-email policy is passed EXPLICITLY. Applying a single policy to both keys is
+     * how ENROLL_SUBMIT_PER_EMAIL became dead config while the docs claimed it was
+     * enforced. `a.guardianEmail` is used rather than the raw draft value because the
+     * schema has already trimmed and lowercased it, so one family cannot get two buckets
+     * by capitalising differently.
+     */
+    const submitBudget = await consumeFormRateLimit("enroll-submit", {
+      ipPolicy: RATE_LIMITS.ENROLL_SUBMIT_PER_IP,
+      identifier: a.guardianEmail,
+      identifierPolicy: RATE_LIMITS.ENROLL_SUBMIT_PER_EMAIL,
+    });
+    if (!submitBudget.ok) {
+      return failure(submitBudget.message ?? "Submission rejected.");
+    }
+
     const now = new Date();
     const ip = await getClientIp();
     const userAgent = await getUserAgent();
@@ -384,9 +503,11 @@ export async function submitEnrollmentAction(
       throw error;
     }
 
-    // --- Notify. Deliberately AFTER the write, and never allowed to fail the
-    // submission: a family must not lose a completed agreement because an email
-    // provider had a bad minute. Failures are queued and surfaced to an admin.
+    /**
+     * --- Notify. Deliberately AFTER the write, and never allowed to fail the submission:
+     * a family must not lose a completed agreement because an email provider had a bad
+     * minute. Failures are queued and surfaced to an admin.
+     */
     const confirmation = enrollmentConfirmationEmail({
       guardianName: a.guardianName,
       studentName: a.studentLegalName,
@@ -399,33 +520,71 @@ export async function submitEnrollmentAction(
       applicationId,
     });
 
-    const [familyResult, schoolResult] = await Promise.all([
-      sendEmail({
-        to: a.guardianEmail,
-        ...confirmation,
-        template: "enrollmentConfirmation",
-        data: { guardianName: a.guardianName, studentName: a.studentLegalName },
-        relatedId: null,
-      }),
-      sendEmail({
-        to: env.SCHOOL_NOTIFICATION_EMAIL,
-        ...notification,
-        template: "newApplicationNotification",
-        data: { applicationId },
-        replyTo: a.guardianEmail,
-        relatedId: null,
-      }),
-    ]);
+    const familyEmail = {
+      to: a.guardianEmail,
+      ...confirmation,
+      template: "enrollmentConfirmation",
+      data: { guardianName: a.guardianName, studentName: a.studentLegalName },
+      relatedId: null,
+    };
+    const schoolEmail = {
+      to: env.SCHOOL_NOTIFICATION_EMAIL,
+      ...notification,
+      template: "newApplicationNotification",
+      data: { applicationId },
+      replyTo: a.guardianEmail,
+      relatedId: null,
+    };
 
-    await applications.updateOne(
-      { idempotencyKey: application.idempotencyKey },
-      {
-        $set: {
-          emailStatus: familyResult.ok && schoolResult.ok ? "sent" : "failed",
-          updatedAt: new Date(),
-        },
-      },
+    /**
+     * GLOBAL EMAIL CIRCUIT BREAKER.
+     *
+     * The confirmation goes to an address the SUBMITTER TYPED, so this form is a relay a
+     * stranger can aim at a stranger, sent from the school's own verified domain. The
+     * damage from abuse is not compute — it is the sending reputation of fyht4.com, which
+     * also carries parent-portal and password-reset mail. If that domain gets throttled or
+     * suspended over complaints, every family loses password resets, not just this form.
+     *
+     * ⚠️  IT IS CHECKED HERE, AFTER THE INSERT, AND IT CAN NEVER REJECT A FAMILY. On trip
+     * the agreement is already stored; the two messages are parked in the retry queue for
+     * the cron drainer instead of being sent now, and the log line is the alert. Degrade
+     * email, never the save. Do not move this check above the insert, and do not turn it
+     * into a `failure()` return.
+     */
+    const emailBudget = await consumeRateLimit(
+      "enroll-submit:email-global",
+      RATE_LIMITS.ENROLLMENT_EMAIL_GLOBAL_PER_DAY.limit,
+      RATE_LIMITS.ENROLLMENT_EMAIL_GLOBAL_PER_DAY.windowSeconds,
     );
+
+    if (!emailBudget.allowed) {
+      console.error(
+        `[anti-abuse] ENROLLMENT EMAIL BREAKER TRIPPED — daily cap of ${RATE_LIMITS.ENROLLMENT_EMAIL_GLOBAL_PER_DAY.limit} reached. Application ${applicationId} is SAVED; its emails are queued, not sent. Investigate for abuse before raising the cap.`,
+      );
+      await Promise.all([
+        queueEmail(familyEmail, "enrollment email breaker tripped", 60 * 60 * 1000),
+        queueEmail(schoolEmail, "enrollment email breaker tripped", 60 * 60 * 1000),
+      ]);
+      await applications.updateOne(
+        { idempotencyKey: application.idempotencyKey },
+        { $set: { emailStatus: "failed", updatedAt: new Date() } },
+      );
+    } else {
+      const [familyResult, schoolResult] = await Promise.all([
+        sendEmail(familyEmail),
+        sendEmail(schoolEmail),
+      ]);
+
+      await applications.updateOne(
+        { idempotencyKey: application.idempotencyKey },
+        {
+          $set: {
+            emailStatus: familyResult.ok && schoolResult.ok ? "sent" : "failed",
+            updatedAt: new Date(),
+          },
+        },
+      );
+    }
 
     await retainDraftForSibling();
     redirect("/enroll/submitted");

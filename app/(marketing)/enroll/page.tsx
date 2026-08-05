@@ -25,8 +25,16 @@ export const metadata: Metadata = {
  * The preparation checklist is deliberately the field inventory of the wizard. Someone
  * who has to abandon the form to hunt for a doctor's phone number often does not come
  * back.
+ *
+ * `?busy=1` is set by startEnrollmentAction when the draft-creation rate limit rejects a
+ * click. Reading searchParams opts this page into dynamic rendering, which is an acceptable
+ * cost: without it the action could only redirect here silently, and the "Begin enrollment"
+ * button simply looked dead — every further click burning another slot, so it could never
+ * recover. A visible explanation with a phone number is the whole point.
  */
-export default function EnrollPage() {
+export default async function EnrollPage({ searchParams }: PageProps<"/enroll">) {
+  const { busy } = await searchParams;
+
   return (
     <>
       <PageHeader
@@ -54,6 +62,19 @@ export default function EnrollPage() {
                 change any answer before signing.
               </p>
             </Prose>
+
+            {busy ? (
+              <div className="mt-7">
+                <Callout title="We could not start a new form just now">
+                  Our system has seen an unusual number of new forms from your
+                  internet connection in the last hour, so it has paused briefly.
+                  Nothing you have already submitted is affected. Please try again
+                  in a few minutes, or call{" "}
+                  <a href={school.phoneHref}>{school.phone}</a> and the Head of
+                  School will take your details directly &mdash; that always works.
+                </Callout>
+              </div>
+            ) : null}
 
             {/* .bind fixes the leading `sibling` argument; React then passes FormData
                 as the next argument, which this action ignores. */}

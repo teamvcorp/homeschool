@@ -51,6 +51,31 @@ export async function createIndexes(): Promise<string[]> {
   note("students.legalName");
   await students.createIndex({ archivedAt: 1 }, { name: "archivedAt" });
   note("students.archivedAt");
+  /**
+   * School ID and school email are unique WHERE PRESENT.
+   *
+   * `partialFilterExpression` restricts the constraint to documents where the field is a
+   * string, so the many students without one yet do not all collide on null — which a plain
+   * unique index would cause after the second record.
+   */
+  await students.createIndex(
+    { schoolId: 1 },
+    {
+      unique: true,
+      name: "schoolId_unique",
+      partialFilterExpression: { schoolId: { $type: "string" } },
+    },
+  );
+  note("students.schoolId_unique (partial)");
+  await students.createIndex(
+    { schoolEmail: 1 },
+    {
+      unique: true,
+      name: "schoolEmail_unique",
+      partialFilterExpression: { schoolEmail: { $type: "string" } },
+    },
+  );
+  note("students.schoolEmail_unique (partial)");
 
   // --- enrollmentApplications ---------------------------------------------
   const applications = db.collection(COLLECTIONS.enrollmentApplications);
@@ -85,6 +110,28 @@ export async function createIndexes(): Promise<string[]> {
     },
   );
   note("enrollmentDrafts.updatedAt_ttl (14d)");
+  /**
+   * A SECOND, much shorter TTL for submitted carry-over stubs.
+   *
+   * After a submit the draft is stripped to the sibling carry-over fields and marked
+   * `submittedAt`. Those fields are still a family's address, phone, emergency contact and
+   * doctor, and the application record already holds them — so the stub has no reason to
+   * survive the sitting it was created in. The 14-day `updatedAt` TTL above is right for an
+   * abandoned in-progress draft and far too long for this.
+   *
+   * MongoDB permits multiple TTL indexes on one collection as long as they watch different
+   * fields, so both apply: whichever fires first wins. `submittedAt` is absent on
+   * in-progress drafts, and a TTL index ignores documents where the field is missing or not
+   * a date — so this only ever reaps submitted stubs.
+   */
+  await drafts.createIndex(
+    { submittedAt: 1 },
+    {
+      expireAfterSeconds: 60 * 60 * 24,
+      name: "submittedAt_ttl",
+    },
+  );
+  note("enrollmentDrafts.submittedAt_ttl (24h)");
 
   // --- attendance ----------------------------------------------------------
   const attendance = db.collection(COLLECTIONS.attendance);

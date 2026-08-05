@@ -118,15 +118,68 @@ export const RATE_LIMITS = {
   ENROLL_STEP_PER_IP: { limit: 120, windowSeconds: 60 * 60 },
 
   /**
-   * Starting an agreement. Very generous: a family enrolling four children in one
-   * sitting legitimately triggers this four times, and the action carries no user input
-   * worth protecting — the cap exists purely to stop unbounded draft creation by a bot.
+   * Starting an agreement — i.e. creating a draft record.
+   *
+   * Very generous: a family enrolling four children in one sitting legitimately triggers
+   * this four times, and the action carries no user input worth protecting. The cap exists
+   * purely to bound draft creation, which is the real denial-of-service path here: a draft
+   * can hold ~2 KB of free text, and unbounded drafts fill the Atlas tier before they cost
+   * anything in compute.
+   *
+   * CONSUMED BY BOTH ENTRY POINTS. `saveEnrollmentStep` also creates a draft when a POST
+   * arrives without one, so it charges this same counter — otherwise the effective
+   * draft-creation ceiling was ENROLL_START + ENROLL_STEP (160/hr), not 40/hr. A real
+   * family passes through the implicit path at most once per agreement.
    */
   ENROLL_START_PER_IP: { limit: 40, windowSeconds: 60 * 60 },
 
-  /** Final submission — one real application per family per sitting. */
-  ENROLL_SUBMIT_PER_IP: { limit: 6, windowSeconds: 60 * 60 },
-  ENROLL_SUBMIT_PER_EMAIL: { limit: 4, windowSeconds: 24 * 60 * 60 },
+  /**
+   * ATTEMPTS at the final submit, charged BEFORE validation.
+   *
+   * Purpose: stop an unmetered loop of "POST garbage at the sign action" (each costs a
+   * draft lookup and a whole-agreement zod parse) without letting a validation mistake eat
+   * into the application budget below. 30/hr is roughly 15× what a real family needs even
+   * if they fumble every checkbox on every child.
+   */
+  ENROLL_SUBMIT_ATTEMPT_PER_IP: { limit: 30, windowSeconds: 60 * 60 },
+
+  /**
+   * COMPLETE, VALID applications. Charged only after the whole-agreement schema passes,
+   * immediately before the insert.
+   *
+   * 10/hr per IP rather than 6: this is now the cap on real applications only, and it must
+   * clear a large family enrolling every child in one sitting with room to spare. It is
+   * also the cap that a shared "unknown IP" bucket would apply to the entire school if a
+   * proxy were ever misconfigured, which is a second reason not to run it tight.
+   */
+  ENROLL_SUBMIT_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
+
+  /**
+   * Per guardian email address. THIS IS NOW ACTUALLY APPLIED — it was previously dead
+   * config: checkPublicFormAbuse took one policy and used it for both the IP key and the
+   * email key, so the real per-email cap was whatever the per-IP cap was.
+   *
+   * 8/day, not the 4/day it used to claim, because 4 would reject the fifth child of a
+   * large family — a false rejection on a genuine agreement. 8 still bounds an IP-rotating
+   * attacker to 8 school-branded emails per day at any one victim address, and the global
+   * breaker below bounds the total regardless.
+   */
+  ENROLL_SUBMIT_PER_EMAIL: { limit: 8, windowSeconds: 24 * 60 * 60 },
+
+  /**
+   * GLOBAL outbound-email circuit breaker for the public enrollment path.
+   *
+   * The confirmation email goes to an address the submitter typed, so the enrollment form
+   * is a relay a stranger can point at a stranger. The cost of abuse is not our compute —
+   * it is the sending reputation of fyht4.com, which also carries parent-portal and
+   * password-reset mail. Resend suspends senders around a ~0.1% complaint rate, and a free
+   * tier is 100 messages a day.
+   *
+   * Checked AFTER the application is stored and it can NEVER reject a family: on trip the
+   * agreement is saved and the emails are parked in the retry queue instead of sent, and an
+   * admin is alerted. At ~5 genuine enrollments a week, 40/day is ~50× headroom.
+   */
+  ENROLLMENT_EMAIL_GLOBAL_PER_DAY: { limit: 40, windowSeconds: 24 * 60 * 60 },
 
   INQUIRY_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
 } as const;

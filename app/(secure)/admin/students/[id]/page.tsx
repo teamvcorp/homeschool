@@ -24,6 +24,7 @@ import {
   BehaviorForm,
   TaekwondoForm,
 } from "./record-forms";
+import { EditStudentForm, SchoolEmailForm } from "./edit-forms";
 
 export const metadata: Metadata = {
   title: "Student record",
@@ -150,6 +151,33 @@ export default async function StudentDetailPage({
               <div className="mt-3">
                 <FactList
                   items={[
+                    {
+                      label: "School ID",
+                      value: student.schoolId ?? "— not assigned —",
+                    },
+                    {
+                      label: "School email",
+                      value: student.schoolEmail ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <code className="text-sm">{student.schoolEmail}</code>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              student.schoolEmailStatus === "active"
+                                ? "bg-crest-green-100 text-crest-green-700"
+                                : student.schoolEmailStatus === "disabled"
+                                  ? "bg-navy-100 text-navy-700"
+                                  : "bg-gold-100 text-gold-800"
+                            }`}
+                          >
+                            {student.schoolEmailStatus === "pending"
+                              ? "pending — no Office 365 mailbox yet"
+                              : student.schoolEmailStatus}
+                          </span>
+                        </span>
+                      ) : (
+                        "— not issued —"
+                      ),
+                    },
                     { label: "Date of birth", value: fmt(student.dateOfBirth) },
                     { label: "Enrolled", value: fmt(student.enrollmentStartDate) },
                     { label: "Guardian", value: student.guardian.name },
@@ -345,6 +373,24 @@ export default async function StudentDetailPage({
           <aside className="flex flex-col gap-6">
             {mayWrite ? (
               <>
+                <details className="rounded-2xl border border-line bg-white p-6">
+                  <summary className="cursor-pointer font-serif text-base font-bold text-navy-900">
+                    Edit student record
+                  </summary>
+                  <div className="mt-4">
+                    <EditStudentForm student={student} />
+                  </div>
+                </details>
+
+                <details className="rounded-2xl border border-line border-l-4 border-l-gold-400 bg-white p-6">
+                  <summary className="cursor-pointer font-serif text-base font-bold text-navy-900">
+                    School email &amp; mailbox status
+                  </summary>
+                  <div className="mt-4">
+                    <SchoolEmailForm student={student} />
+                  </div>
+                </details>
+
                 {[
                   { title: "Record attendance", Form: AttendanceForm },
                   { title: "Record mastery", Form: MasteryForm },

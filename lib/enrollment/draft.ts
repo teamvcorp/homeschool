@@ -1,9 +1,14 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { env, isProduction } from "../env";
 import { draftsCollection } from "../db/collections";
 import type { EnrollmentDraftDoc } from "../db/types";
+import {
+  signWithFormSecret,
+  verifyWithFormSecret,
+  splitSignedToken,
+} from "../forms/hmac";
 
 /**
  * ENROLLMENT DRAFT STATE
@@ -30,43 +35,51 @@ import type { EnrollmentDraftDoc } from "../db/types";
  * The design also happens to give progressive enhancement for free: each step is an
  * ordinary form POST, so the wizard works with JavaScript disabled.
  *
- * A TTL index on `updatedAt` expires abandoned drafts after 14 days — housekeeping,
- * but mostly so a half-entered medical history does not sit in the database forever.
+ * RETENTION, in three tiers:
+ *   - Abandoned in-progress draft: TTL on `updatedAt`, 14 days.
+ *   - Submitted carry-over stub:   TTL on `submittedAt`, 24 hours (see indexes.ts).
+ *   - Consumed carry-over stub:    deleted immediately by startEnrollmentAction.
  */
 
 const DRAFT_COOKIE = "va_enroll_draft";
+
+/** Cookie lifetime for an IN-PROGRESS agreement. Matches the 14-day draft TTL. */
 const DRAFT_MAX_AGE_SECONDS = 60 * 60 * 24 * 14;
+
+/**
+ * How long a submitted agreement stays available as a sibling seed — cookie lifetime
+ * and freshness check both.
+ *
+ * WHY SO SHORT. Sibling enrollment happens in one sitting; nobody comes back three days
+ * later expecting their address to still be pre-filled. Meanwhile the cookie surviving a
+ * submit means that on a shared family, library, or school-office computer, the NEXT
+ * visitor who clicks "Start an agreement for another child" would be shown the PREVIOUS
+ * family's address, phone, emergency contact, and doctor. Two hours keeps the feature and
+ * closes that cross-family disclosure to a single sitting.
+ */
+export const SIBLING_SEED_MAX_AGE_MS = 1000 * 60 * 60 * 2;
+const SIBLING_COOKIE_MAX_AGE_SECONDS = SIBLING_SEED_MAX_AGE_MS / 1000;
 
 /* --------------------------------- signing --------------------------------- */
 
-function sign(draftId: string): string {
-  return createHmac("sha256", env.FORM_HMAC_SECRET)
-    .update(draftId)
-    .digest("base64url");
-}
-
 /** `<id>.<signature>` — verified before the id is ever used in a query. */
 function encodeCookie(draftId: string): string {
-  return `${draftId}.${sign(draftId)}`;
+  return `${draftId}.${signWithFormSecret(draftId)}`;
 }
 
+/**
+ * Decodes and verifies the cookie.
+ *
+ * Signing and constant-time verification live in lib/forms/hmac.ts, shared with the form
+ * timestamp — including the accept-previous-key behaviour, which is what stops a secret
+ * rotation (or the addition of `.trim()` in env.ts) from invalidating every family's
+ * in-progress agreement at once.
+ */
 function decodeCookie(value: string | undefined): string | null {
-  if (!value) return null;
-  const separator = value.lastIndexOf(".");
-  if (separator <= 0) return null;
-
-  const draftId = value.slice(0, separator);
-  const provided = value.slice(separator + 1);
-  const expected = sign(draftId);
-
-  // Constant-time comparison: a plain === leaks the signature one byte at a time
-  // through response timing.
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-
-  return draftId;
+  const token = splitSignedToken(value);
+  if (!token) return null;
+  if (!verifyWithFormSecret(token.payload, token.signature)) return null;
+  return token.payload;
 }
 
 /* ---------------------------------- cookie --------------------------------- */
@@ -77,40 +90,50 @@ export async function getDraftId(): Promise<string | null> {
   return decodeCookie(store.get(DRAFT_COOKIE)?.value);
 }
 
-/**
- * Issues a fresh draft id and sets the cookie.
- *
- * ONLY callable from a Server Action or Route Handler — Next throws if a cookie is
- * set during a Server Component render.
- */
-export async function startDraft(seed: Record<string, unknown> = {}): Promise<string> {
-  const draftId = randomBytes(24).toString("base64url");
+async function setDraftCookie(draftId: string, maxAge: number): Promise<void> {
   const store = await cookies();
-
   store.set(DRAFT_COOKIE, encodeCookie(draftId), {
     httpOnly: true,
     secure: isProduction,
     sameSite: "lax",
     path: "/",
-    maxAge: DRAFT_MAX_AGE_SECONDS,
+    maxAge,
   });
+}
+
+export async function clearDraftCookie(): Promise<void> {
+  const store = await cookies();
+  store.delete(DRAFT_COOKIE);
+}
+
+/**
+ * Issues a fresh draft id and sets the cookie.
+ *
+ * ONLY callable from a Server Action or Route Handler — Next throws if a cookie is
+ * set during a Server Component render.
+ *
+ * `seed` is the sibling carry-over. Its keys are recorded separately in `seededFields`
+ * so the wizard can TELL the family which values were pre-filled: a silently pre-populated
+ * value on a document they are about to sign should be confirmed, not assumed, and a
+ * family who lands on an empty first step with no notice concludes (as one did) that the
+ * carry-over did not work.
+ */
+export async function startDraft(seed: Record<string, unknown> = {}): Promise<string> {
+  const draftId = randomBytes(24).toString("base64url");
+  await setDraftCookie(draftId, DRAFT_MAX_AGE_SECONDS);
 
   const drafts = await draftsCollection();
   const now = new Date();
   await drafts.insertOne({
     draftId,
     data: seed,
+    seededFields: Object.keys(seed),
     completedStep: 0,
     createdAt: now,
     updatedAt: now,
   });
 
   return draftId;
-}
-
-export async function clearDraftCookie(): Promise<void> {
-  const store = await cookies();
-  store.delete(DRAFT_COOKIE);
 }
 
 /* ----------------------------------- data ---------------------------------- */
@@ -143,11 +166,11 @@ export async function loadActiveDraft(): Promise<EnrollmentDraftDoc | null> {
 }
 
 /**
- * Merges validated step data into the draft.
+ * Merges step data into the draft.
  *
- * Only ever called with output that has already passed a zod schema, so the draft
- * cannot accumulate arbitrary keys from a crafted POST body. `completedStep` only
- * moves forward, so revisiting an earlier step to fix a typo does not reset progress.
+ * `completedStep` only moves forward, so revisiting an earlier step to fix a typo does not
+ * reset progress. Keys are whitelisted by the step schema at the call site, so the draft
+ * cannot accumulate arbitrary fields from a crafted POST body.
  */
 export async function saveDraftStep(
   patch: Record<string, unknown>,
@@ -158,7 +181,11 @@ export async function saveDraftStep(
 
   const drafts = await draftsCollection();
   const result = await drafts.updateOne(
-    { draftId },
+    // The `submittedAt` guard belongs in the query, not just in the caller: a signed
+    // agreement must not be writable even if a future call site forgets to check.
+    // `submittedAt: null` is the MongoDB idiom that matches "null OR field absent",
+    // which is what an in-progress draft looks like (startDraft never sets the field).
+    { draftId, submittedAt: null },
     {
       $set: {
         // Dot-notation keys so a step updates only its own fields rather than
@@ -175,34 +202,47 @@ export async function saveDraftStep(
   return result.matchedCount === 1;
 }
 
-/** Deletes the draft record and clears the cookie. */
-export async function discardDraft(): Promise<void> {
-  const draftId = await getDraftId();
-  if (draftId) {
-    const drafts = await draftsCollection();
-    await drafts.deleteOne({ draftId });
-  }
-  await clearDraftCookie();
+/* -------------------------------- lifecycle -------------------------------- */
+
+/**
+ * Deletes one draft record by id. Does NOT touch the cookie.
+ *
+ * ⚠️  THERE IS DELIBERATELY NO `discardDraft()` HELPER ANY MORE.
+ *
+ * There used to be one — "delete the record and clear the cookie" — and submit called it.
+ * That is exactly the bug that made "enroll another child" silently do nothing: by the time
+ * the family clicked the sibling button there was nothing left to copy their contact
+ * details from, so siblingSeed() received an empty object. The feature looked implemented
+ * and had never once worked.
+ *
+ * A convenient combined helper is what made that mistake a one-liner, so the primitives are
+ * now separate and the submit path uses `retainDraftForSibling` instead. If you are about to
+ * re-add a discard-on-submit helper, you are re-adding Bug 2.
+ */
+export async function deleteDraftRecord(draftId: string): Promise<void> {
+  const drafts = await draftsCollection();
+  await drafts.deleteOne({ draftId });
 }
 
 /**
- * Called after a successful submit, INSTEAD of discardDraft.
+ * Called after a successful submit, INSTEAD of deleting the draft.
  *
- * ⚠️  DO NOT replace this with discardDraft. Doing so is precisely the bug that made the
- * "enroll another child" pre-fill silently do nothing: submit deleted the draft and cleared
- * the cookie, so by the time the family clicked the sibling button there was nothing left
- * to copy their contact details from, and siblingSeed() received an empty object.
- *
- * What this does instead:
+ * What this does:
  *   1. STRIPS the draft down to only the sibling carry-over fields. The child's medical
  *      history, name, date of birth, acknowledgments, media-release choice and signature
- *      are all removed — the application record is the system of record for those, and
- *      keeping a second copy in a draft for another 14 days is retention we do not need.
- *   2. MARKS it submitted, so the step pages refuse to resume it.
- *   3. KEEPS the cookie, so the sibling flow can find it.
+ *      are all removed — the application record is the system of record for those, and a
+ *      second copy in a draft is retention with no purpose.
+ *   2. MARKS it submitted, so the step pages refuse to resume it and `saveDraftStep`
+ *      refuses to write to it.
+ *   3. SHORTENS the cookie to the sibling window (2 hours), so a shared computer does not
+ *      hand the next visitor this family's contact details.
  *
- * Net effect: the family's contact details survive for the sibling flow, the sensitive
- * data does not, and the TTL index still reaps the remainder.
+ * `submittedAt` also drives a 24-hour TTL index, so an unused stub reaps itself even if the
+ * family never clicks the sibling button. The normal path deletes it sooner than that —
+ * startEnrollmentAction removes it the moment the seed has been read.
+ *
+ * Idempotent: siblingSeed over already-stripped data is a no-op, so the double-submit path
+ * (unique-index collision) can call this safely in either order.
  */
 export async function retainDraftForSibling(): Promise<void> {
   const draftId = await getDraftId();
@@ -212,17 +252,23 @@ export async function retainDraftForSibling(): Promise<void> {
   const existing = await drafts.findOne({ draftId });
   if (!existing) return;
 
+  const now = new Date();
   await drafts.updateOne(
     { draftId },
     {
       $set: {
         // Only the carry-over fields survive.
         data: siblingSeed(existing.data),
-        submittedAt: new Date(),
-        updatedAt: new Date(),
+        submittedAt: existing.submittedAt ?? now,
+        updatedAt: now,
       },
+      // The stub is no longer a form to fill in, so a "carried over" notice would be
+      // meaningless on it. The next draft records its own seededFields in startDraft.
+      $unset: { seededFields: "" },
     },
   );
+
+  await setDraftCookie(draftId, SIBLING_COOKIE_MAX_AGE_SECONDS);
 }
 
 /**
@@ -231,6 +277,13 @@ export async function retainDraftForSibling(): Promise<void> {
  * Derived from the draft id, so a double-clicked submit or a retried request maps to
  * the same key and the unique index on `enrollmentApplications.idempotencyKey` turns
  * the second write into a no-op rather than a duplicate family record.
+ *
+ * NOTE: signed with the CURRENT secret only, not the rotation-tolerant verifier — this
+ * value is stored and queried, so it must be reproducible, not merely verifiable. The
+ * consequence to accept: rotating FORM_HMAC_SECRET while a draft is mid-flight changes that
+ * draft's key, so a submit-then-retry straddling the rotation could produce two
+ * applications. That is a duplicate an admin can see and merge, which is a far better
+ * failure than a rotation-tolerant key that cannot be looked up.
  */
 export function idempotencyKeyFor(draftId: string): string {
   return createHmac("sha256", env.FORM_HMAC_SECRET)
@@ -242,11 +295,26 @@ export function idempotencyKeyFor(draftId: string): string {
  * Seed values carried into a sibling's application.
  *
  * Families enrol one student per agreement (per Document 9), so a family with three
- * children completes this three times. Guardian, address, and medical-provider
- * details are identical across siblings, and retyping them is exactly the friction
- * that makes someone abandon the third form. Student-specific and consent fields are
- * deliberately NOT carried over — each child needs their own medical history, and
- * each agreement needs its own freely-given signature and media-release decision.
+ * children completes this three times. Guardian, address, and medical-provider details are
+ * identical across siblings, and retyping them is exactly the friction that makes someone
+ * abandon the third form.
+ *
+ * ⚠️  WHAT IS DELIBERATELY NOT HERE, AND WHY EACH ONE MATTERS
+ *
+ * Student identity, medical history, acknowledgments, media release, signature: each child
+ * needs their own, and each agreement needs its own freely-given consent.
+ *
+ * `esaElection` — REMOVED, and it must not come back. The Iowa ESA is a PER-STUDENT
+ * account, so the funding election is a per-student decision. Carried over, it arrived
+ * pre-selected on the funding step and was written verbatim into the second child's
+ * application: a family who elected ESA for child 1 and intended to pay directly for
+ * child 2 could click straight past a pre-selected radio and end up with a signed
+ * agreement recording a financial election they never made. It is also not what the
+ * confirmation page promises ("your contact details and doctor's information").
+ *
+ * THIS LIST IS PART OF A USER-FACING PROMISE. If you add a field here, update the copy on
+ * app/(marketing)/enroll/submitted/page.tsx and docs/forms-and-validation.md in the same
+ * commit.
  */
 export function siblingSeed(
   previous: Record<string, unknown>,
@@ -260,7 +328,6 @@ export function siblingSeed(
     "emergencyContactPhone",
     "doctorName",
     "doctorPhone",
-    "esaElection",
   ] as const;
 
   return Object.fromEntries(

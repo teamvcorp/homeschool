@@ -11,7 +11,8 @@
     "typegen": "next typegen",
     "db:init": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/db-init.ts",
     "db:ping": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/db-ping.ts",
-    "seed:admin": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-admin.ts"
+    "seed:admin": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-admin.ts",
+    "dev:test": "node -e \"process.env.MONGODB_DB='va_school_test';require('child_process').spawn(process.platform==='win32'?'npx.cmd':'npx',['next','dev'],{stdio:'inherit',env:process.env})\""
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",

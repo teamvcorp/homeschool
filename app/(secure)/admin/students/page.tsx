@@ -105,6 +105,37 @@ export default async function StudentsPage() {
                         <dt className="text-ink-subtle">Status:</dt>
                         <dd className="capitalize text-ink">{s.status}</dd>
                       </div>
+                      <div className="flex gap-2">
+                        <dt className="text-ink-subtle">School ID:</dt>
+                        <dd className="text-ink">{s.schoolId ?? "—"}</dd>
+                      </div>
+                      {/* Shown on the roster so staff can see at a glance which mailboxes
+                          still need creating in Office 365, without opening each record. */}
+                      <div className="mt-1 flex flex-col gap-0.5">
+                        <dt className="text-ink-subtle">School email:</dt>
+                        <dd>
+                          {s.schoolEmail ? (
+                            <>
+                              <code className="break-all text-xs text-ink">
+                                {s.schoolEmail}
+                              </code>
+                              <span
+                                className={`ml-1 rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold ${
+                                  s.schoolEmailStatus === "active"
+                                    ? "bg-crest-green-100 text-crest-green-700"
+                                    : s.schoolEmailStatus === "disabled"
+                                      ? "bg-navy-100 text-navy-700"
+                                      : "bg-gold-100 text-gold-800"
+                                }`}
+                              >
+                                {s.schoolEmailStatus}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-ink-subtle">— not issued —</span>
+                          )}
+                        </dd>
+                      </div>
                     </dl>
                   </Link>
                 </li>

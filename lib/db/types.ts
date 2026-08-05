@@ -14,6 +14,7 @@ import type {
   MediaReleaseChoice,
   AcknowledgmentKey,
   StudentStatus,
+  SchoolEmailStatus,
   CareerPathwayId,
   PartnershipStatus,
   CompensationType,
@@ -106,6 +107,26 @@ export interface StudentDoc extends Base {
   cohort: CohortId;
   enrollmentStartDate: Date;
   status: StudentStatus;
+
+  /**
+   * The school's own identifier for this student, as used on paperwork and in the
+   * K12/Stride platform. Administrator-assigned free text rather than generated, because
+   * the school's numbering convention is theirs to decide. Unique when present.
+   */
+  schoolId?: string | null;
+
+  /**
+   * Issued address on vaschool.org, generated from name and date of birth by
+   * lib/school-email.ts — {firstName}{DD}{lastInitial}{YY}, e.g. lily16v13@vaschool.org.
+   *
+   * Generated at promotion but NOT live until the Office 365 mailbox exists, which is what
+   * `schoolEmailStatus` tracks. Nothing in the system may send mail to this address while
+   * it is pending.
+   */
+  schoolEmail?: string | null;
+  schoolEmailStatus?: SchoolEmailStatus;
+  /** When an administrator confirmed the Office 365 mailbox was live. */
+  schoolEmailActivatedAt?: Date | null;
   guardian: GuardianContact;
   medical: MedicalInfo;
   mediaRelease: MediaReleaseChoice;
@@ -205,6 +226,18 @@ export interface EnrollmentDraftDoc {
   data: Record<string, unknown>;
   /** Highest step the family has completed. */
   completedStep: number;
+
+  /**
+   * Which keys in `data` were pre-filled by the sibling carry-over rather than typed by
+   * the family on this agreement.
+   *
+   * Recorded so the wizard can SAY which values were carried over. Two reasons that
+   * matters: a pre-populated value on a document someone is about to sign should be
+   * confirmed rather than assumed, and a family who reaches an apparently-blank first step
+   * with no explanation concludes the carry-over is broken — which is exactly what was
+   * reported.
+   */
+  seededFields?: string[];
   /**
    * Set once this draft's agreement has been successfully submitted.
    *

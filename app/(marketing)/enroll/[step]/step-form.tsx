@@ -20,6 +20,9 @@ import {
   FormError,
 } from "@/app/components/forms/Field";
 import { SubmitButton, AntiAbuseFields } from "@/app/components/forms/SubmitButton";
+// Purely presentational and free of server-only imports, so it is safe inside a Client
+// Component.
+import { Callout } from "@/app/components/ui/Callout";
 
 /**
  * The wizard form body.
@@ -45,6 +48,7 @@ export default function StepForm({
   timestamp,
   acknowledgments,
   previousHref,
+  showCarryOverNotice = false,
 }: {
   slug: StepSlug;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -52,6 +56,8 @@ export default function StepForm({
   timestamp: string;
   acknowledgments: Acknowledgment[];
   previousHref: Route | null;
+  /** True when this step holds values carried over from a previous agreement. */
+  showCarryOverNotice?: boolean;
 }) {
   const [state, formAction] = useActionState(action, idleState);
   const err = (name: string) => state.fieldErrors?.[name]?.[0];
@@ -60,6 +66,18 @@ export default function StepForm({
     <form action={formAction} className="relative flex flex-col gap-6" noValidate>
       <AntiAbuseFields timestamp={timestamp} />
       <FormError message={!state.ok ? state.message : undefined} />
+
+      {/* Pre-filled values on a document about to be signed must be confirmed, not
+          assumed — and saying so is also what tells a family the sibling carry-over
+          worked. Without it, the flow lands on a step showing none of these fields and
+          looks like it copied nothing. */}
+      {showCarryOverNotice ? (
+        <Callout title="Carried over from your last agreement">
+          We have filled these in from the agreement you just completed. Please check
+          they are still correct for this child before continuing &mdash; you can change
+          anything here.
+        </Callout>
+      ) : null}
 
       {slug === "student" ? (
         <>

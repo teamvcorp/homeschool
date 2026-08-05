@@ -97,13 +97,37 @@ export async function sendEmail(input: SendEmailInput): Promise<SendResult> {
 }
 
 /**
- * Stores a failed send for later retry.
+ * Queues a message for the retry drainer WITHOUT attempting to send it now.
+ *
+ * Exists for the enrollment email circuit breaker: when the global daily send budget is
+ * exhausted, the application is still stored and its emails must not be silently dropped —
+ * they are parked here for /api/email/retry to drain later. That keeps the "a submission is
+ * never lost because email failed" promise intact while protecting the sending domain's
+ * reputation, which parent-portal and password-reset mail also depend on.
+ *
+ * `delayMs` sets the first attempt. Give the breaker a delay longer than a few minutes so
+ * the drainer does not immediately re-attempt into the same condition.
+ */
+export async function queueEmail(
+  input: SendEmailInput,
+  reason: string,
+  delayMs = 5 * 60 * 1000,
+): Promise<void> {
+  return queueForRetry(input, reason, delayMs);
+}
+
+/**
+ * Stores a failed (or deliberately deferred) send for later retry.
  *
  * Persists the template id and its data, not the rendered HTML — a template fix ships
  * with the next deploy and the retry picks it up, rather than resending the broken
  * version forever.
  */
-async function queueForRetry(input: SendEmailInput, error: string): Promise<void> {
+async function queueForRetry(
+  input: SendEmailInput,
+  error: string,
+  delayMs = 5 * 60 * 1000,
+): Promise<void> {
   try {
     const queue = await emailQueueCollection();
     const now = new Date();
@@ -112,11 +136,12 @@ async function queueForRetry(input: SendEmailInput, error: string): Promise<void
       subject: input.subject,
       template: input.template,
       data: input.data ?? {},
+      // "failed" is what the drainer's query selects on. A deferred message is not a
+      // failure in spirit, but reusing the status keeps one code path for retries.
       status: "failed",
       attempts: 1,
       lastError: error.slice(0, 500),
-      // First retry in five minutes; the retry route applies backoff after that.
-      nextAttemptAt: new Date(now.getTime() + 5 * 60 * 1000),
+      nextAttemptAt: new Date(now.getTime() + delayMs),
       relatedId: input.relatedId ?? null,
       createdAt: now,
       updatedAt: now,

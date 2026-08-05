@@ -26,9 +26,20 @@ export const metadata: Metadata = {
  * The sibling action exists because Document 9 requires one agreement per student, and a
  * family with three children would otherwise retype the same address three times. It
  * carries forward only guardian, address, and medical-provider details — never medical
- * history, never a signature, never a media-release choice.
+ * history, never a signature, never a media-release choice, and never the funding election
+ * (the Iowa ESA is a per-student account, so that decision is per-student).
+ *
+ * ⚠️  THE COPY BELOW IS A PROMISE ABOUT lib/enrollment/draft.ts → siblingSeed(). If that
+ * list changes, this text changes in the same commit. It also names WHICH STEP the carried
+ * values appear on, because the sibling flow lands on the student step — which shows none
+ * of them — and a family seeing a blank first page reasonably concluded the carry-over was
+ * broken. That report is Bug 2's visible half.
  */
-export default function EnrollmentSubmittedPage() {
+export default async function EnrollmentSubmittedPage({
+  searchParams,
+}: PageProps<"/enroll/submitted">) {
+  const { busy } = await searchParams;
+
   return (
     <>
       <PageHeader
@@ -73,8 +84,27 @@ export default function EnrollmentSubmittedPage() {
         <SectionHeading
           eyebrow="Enrolling more than one child?"
           title="Add a sibling"
-          lead="Each student needs their own agreement. We will carry over your contact details and doctor's information so you are not retyping them — everything specific to the child, and the signature, starts fresh."
+          lead="Each student needs their own agreement. We will carry over your contact details and doctor's information so you are not retyping them — everything specific to the child, including funding and the signature, starts fresh."
         />
+
+        <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+          The first page asks about the new student, so it will look empty &mdash;
+          your address, phone, emergency contact and doctor are already filled in on
+          the <strong>parent / guardian</strong> and <strong>medical</strong> steps
+          that follow. Please check them over before you sign.
+        </p>
+
+        {busy ? (
+          <div className="mt-6">
+            <Callout title="We could not start the next form just now">
+              Our system has paused new forms from your connection for a few minutes.
+              The agreement you just signed is safely on file. Try this button again
+              shortly, or call <a href={school.phoneHref}>{school.phone}</a> and we
+              will add your other child&rsquo;s details for you.
+            </Callout>
+          </div>
+        ) : null}
+
         <form action={startEnrollmentAction.bind(null, true)} className="mt-6">
           <SubmitButton
             label="Start an agreement for another child"

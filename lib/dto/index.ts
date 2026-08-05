@@ -165,6 +165,10 @@ export interface StudentListItem {
   cohort: string;
   status: string;
   enrollmentStartDate: string | null;
+  /** The school-issued identity. Safe on a list row: neither is sensitive. */
+  schoolId: string | null;
+  schoolEmail: string | null;
+  schoolEmailStatus: string;
 }
 
 export function toStudentListItem(doc: StudentDoc): StudentListItem {
@@ -175,6 +179,10 @@ export function toStudentListItem(doc: StudentDoc): StudentListItem {
     cohort: doc.cohort,
     status: doc.status,
     enrollmentStartDate: isoDate(doc.enrollmentStartDate),
+    schoolId: doc.schoolId ?? null,
+    schoolEmail: doc.schoolEmail ?? null,
+    // Defaults to pending for records created before the field existed.
+    schoolEmailStatus: doc.schoolEmailStatus ?? "pending",
   };
 }
 

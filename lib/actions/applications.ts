@@ -12,6 +12,11 @@ import type { StudentDoc } from "../db/types";
 import { requireCapability } from "../dal";
 import { logAudit } from "../audit";
 import { agreementHash, CONSENT_VERSION } from "../enrollment/agreement";
+import {
+  buildSchoolEmailLocalPart,
+  resolveCollision,
+  SCHOOL_EMAIL_DOMAIN,
+} from "../school-email";
 import { type ActionState, guardAction, failure, success, fromZodError } from "./types";
 
 /**
@@ -217,13 +222,55 @@ export async function promoteApplicationAction(
     if (application.promotedStudentId) {
       return failure("This application has already been promoted to a student record.");
     }
-    if (application.status !== "accepted") {
+
+    /**
+     * `accepted` is the normal precondition. `enrolled` is accepted too, as a RECOVERY
+     * path: before `accepted → enrolled` was removed from the status dropdown, an
+     * administrator could set that status manually, which created no student record and
+     * then hid the promote form — leaving the application permanently stuck. Allowing
+     * promotion from `enrolled`-without-a-student rescues any record already in that state.
+     */
+    const promotable =
+      application.status === "accepted" || application.status === "enrolled";
+    if (!promotable) {
       return failure(
         `Only an accepted application can be promoted. This one is "${application.status}".`,
       );
     }
 
     const now = new Date();
+
+    /**
+     * Issue the school email address now, as pending.
+     *
+     * Generated from the student's name and date of birth
+     * ({firstName}{DD}{lastInitial}{YY}@vaschool.org) and checked against every address
+     * already issued, because the format encodes no month and so genuinely collides for two
+     * students sharing a given name, birth day, birth year, and surname initial.
+     *
+     * Recorded as `pending`: the address exists in our records but there is no Office 365
+     * mailbox behind it until someone creates one, so nothing may send mail to it yet.
+     */
+    const baseLocal = buildSchoolEmailLocalPart({
+      legalName: application.studentLegalName,
+      dateOfBirth: application.dateOfBirth,
+    });
+
+    let schoolEmail: string | null = null;
+    if (baseLocal) {
+      const existing = await students
+        .find(
+          { schoolEmail: { $ne: null } },
+          { projection: { schoolEmail: 1 } },
+        )
+        .toArray();
+      const { localPart } = resolveCollision(
+        baseLocal,
+        existing.map((s) => s.schoolEmail ?? "").filter(Boolean),
+      );
+      schoolEmail = `${localPart}@${SCHOOL_EMAIL_DOMAIN}`;
+    }
+
     const student: StudentDoc = {
       legalName: application.studentLegalName,
       dateOfBirth: application.dateOfBirth,
@@ -232,6 +279,10 @@ export async function promoteApplicationAction(
       cohort,
       enrollmentStartDate: application.enrollmentStartDate,
       status: "enrolled",
+      schoolId: null,
+      schoolEmail,
+      schoolEmailStatus: "pending",
+      schoolEmailActivatedAt: null,
       guardian: application.guardian,
       medical: application.medical,
       mediaRelease: application.mediaRelease,
