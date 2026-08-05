@@ -12,6 +12,8 @@
     "db:init": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/db-init.ts",
     "db:ping": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/db-ping.ts",
     "seed:admin": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-admin.ts",
+    "check:email": "tsx --conditions=react-server scripts/check-school-email.ts",
+    "seed:test-fixtures": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-test-fixtures.ts",
     "dev:test": "node -e \"process.env.MONGODB_DB='va_school_test';require('child_process').spawn(process.platform==='win32'?'npx.cmd':'npx',['next','dev'],{stdio:'inherit',env:process.env})\""
   },
   "dependencies": {
