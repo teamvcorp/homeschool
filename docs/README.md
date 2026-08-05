@@ -10,6 +10,7 @@ not obvious from the code.
 | [`auth-model.md`](./auth-model.md) | Touching sessions, roles, login, or anything behind `/admin` or `/portal`. |
 | [`security-checklist.md`](./security-checklist.md) | Before deploying publicly. Also the rules for adding code that touches student data. |
 | [`data-dictionary.md`](./data-dictionary.md) | Adding a collection, field, or query. Maps every field to its source document. |
+| [`forms-and-validation.md`](./forms-and-validation.md) | **Before touching the enrollment form or the anti-abuse checks.** Records a production incident where the honeypot rejected real families. |
 | [`design-system.md`](./design-system.md) | Adding a page or component; picking a colour. |
 | [`content-sources.md`](./content-sources.md) | Editing site copy — traces each page to its accreditation-package source. |
 

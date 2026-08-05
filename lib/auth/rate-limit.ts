@@ -117,6 +117,13 @@ export const RATE_LIMITS = {
    */
   ENROLL_STEP_PER_IP: { limit: 120, windowSeconds: 60 * 60 },
 
+  /**
+   * Starting an agreement. Very generous: a family enrolling four children in one
+   * sitting legitimately triggers this four times, and the action carries no user input
+   * worth protecting — the cap exists purely to stop unbounded draft creation by a bot.
+   */
+  ENROLL_START_PER_IP: { limit: 40, windowSeconds: 60 * 60 },
+
   /** Final submission — one real application per family per sitting. */
   ENROLL_SUBMIT_PER_IP: { limit: 6, windowSeconds: 60 * 60 },
   ENROLL_SUBMIT_PER_EMAIL: { limit: 4, windowSeconds: 24 * 60 * 60 },

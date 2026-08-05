@@ -197,10 +197,27 @@ export interface EnrollmentDraftDoc {
   _id?: ObjectId;
   /** Random opaque id; the value in the signed cookie. */
   draftId: string;
-  /** Partial application data, validated per step as it arrives. */
+  /**
+   * Partial application data as RAW INPUT (the strings the family typed), not
+   * post-validation output. Storing transformed values here once broke the final
+   * whole-agreement re-validation — see the note in lib/actions/enrollment.ts.
+   */
   data: Record<string, unknown>;
   /** Highest step the family has completed. */
   completedStep: number;
+  /**
+   * Set once this draft's agreement has been successfully submitted.
+   *
+   * The draft is NOT deleted at that point, because the "enroll another child" flow needs
+   * the guardian's contact details to carry over — deleting it is exactly the bug that made
+   * sibling pre-fill silently do nothing. Instead the draft is stripped to just the
+   * carry-over fields (no medical history, no student identity, no signature) and marked
+   * here, so:
+   *   - the sibling flow can still read the contact details
+   *   - the step pages refuse to RESUME it, so nobody re-enters a submitted agreement
+   *   - the TTL index still reaps it
+   */
+  submittedAt?: Date | null;
   createdAt: Date;
   /** TTL index watches this field. */
   updatedAt: Date;

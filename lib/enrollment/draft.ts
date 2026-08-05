@@ -115,11 +115,31 @@ export async function clearDraftCookie(): Promise<void> {
 
 /* ----------------------------------- data ---------------------------------- */
 
+/**
+ * The draft the cookie points at, WHETHER OR NOT it has been submitted.
+ *
+ * Use this only where a submitted draft is legitimately wanted — currently just the sibling
+ * carry-over, which reads the contact details out of the agreement that was just submitted.
+ * For anything that resumes or writes the wizard, use `loadActiveDraft`.
+ */
 export async function loadDraft(): Promise<EnrollmentDraftDoc | null> {
   const draftId = await getDraftId();
   if (!draftId) return null;
   const drafts = await draftsCollection();
   return drafts.findOne({ draftId });
+}
+
+/**
+ * The draft the cookie points at, only if it is still in progress.
+ *
+ * Returns null for a submitted draft, so a family cannot land back in an agreement they
+ * have already signed — and so a stray POST cannot write student data into the stripped
+ * carry-over record left behind by a submit.
+ */
+export async function loadActiveDraft(): Promise<EnrollmentDraftDoc | null> {
+  const draft = await loadDraft();
+  if (!draft || draft.submittedAt) return null;
+  return draft;
 }
 
 /**
@@ -155,7 +175,7 @@ export async function saveDraftStep(
   return result.matchedCount === 1;
 }
 
-/** Deletes the draft record and clears the cookie. Called after a successful submit. */
+/** Deletes the draft record and clears the cookie. */
 export async function discardDraft(): Promise<void> {
   const draftId = await getDraftId();
   if (draftId) {
@@ -163,6 +183,46 @@ export async function discardDraft(): Promise<void> {
     await drafts.deleteOne({ draftId });
   }
   await clearDraftCookie();
+}
+
+/**
+ * Called after a successful submit, INSTEAD of discardDraft.
+ *
+ * ⚠️  DO NOT replace this with discardDraft. Doing so is precisely the bug that made the
+ * "enroll another child" pre-fill silently do nothing: submit deleted the draft and cleared
+ * the cookie, so by the time the family clicked the sibling button there was nothing left
+ * to copy their contact details from, and siblingSeed() received an empty object.
+ *
+ * What this does instead:
+ *   1. STRIPS the draft down to only the sibling carry-over fields. The child's medical
+ *      history, name, date of birth, acknowledgments, media-release choice and signature
+ *      are all removed — the application record is the system of record for those, and
+ *      keeping a second copy in a draft for another 14 days is retention we do not need.
+ *   2. MARKS it submitted, so the step pages refuse to resume it.
+ *   3. KEEPS the cookie, so the sibling flow can find it.
+ *
+ * Net effect: the family's contact details survive for the sibling flow, the sensitive
+ * data does not, and the TTL index still reaps the remainder.
+ */
+export async function retainDraftForSibling(): Promise<void> {
+  const draftId = await getDraftId();
+  if (!draftId) return;
+
+  const drafts = await draftsCollection();
+  const existing = await drafts.findOne({ draftId });
+  if (!existing) return;
+
+  await drafts.updateOne(
+    { draftId },
+    {
+      $set: {
+        // Only the carry-over fields survive.
+        data: siblingSeed(existing.data),
+        submittedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    },
+  );
 }
 
 /**

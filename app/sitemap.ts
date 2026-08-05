@@ -1,7 +1,23 @@
 import type { MetadataRoute } from "next";
 import { accreditationDocs } from "@/lib/site";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://thevacorp.com";
+/**
+ * The site's absolute origin.
+ *
+ * The fallback is localhost DELIBERATELY. An earlier version fell back to a guessed
+ * production domain, which turned out to belong to a different organisation — so a missing
+ * environment variable would have quietly published this school's sitemap, canonical URLs,
+ * and structured data pointing at someone else's website.
+ *
+ * A localhost fallback is obviously wrong in production, which is the point: it surfaces a
+ * misconfiguration instead of hiding it behind a plausible-looking domain. Set
+ * NEXT_PUBLIC_SITE_URL in the deployment environment.
+ *
+ * Read from process.env rather than lib/env.ts on purpose: this file is prerendered at
+ * build time, and importing the validated env module would make the build require runtime
+ * secrets again.
+ */
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 /**
  * Sitemap.

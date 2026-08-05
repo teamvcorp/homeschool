@@ -14,8 +14,9 @@ import {
   getDraftId,
   startDraft,
   loadDraft,
+  loadActiveDraft,
   saveDraftStep,
-  discardDraft,
+  retainDraftForSibling,
   idempotencyKeyFor,
   siblingSeed,
 } from "../enrollment/draft";
@@ -24,7 +25,7 @@ import { applicationsCollection } from "../db/collections";
 import { ACKNOWLEDGMENT_KEYS } from "../db/enums";
 import type { EnrollmentApplicationDoc } from "../db/types";
 import { checkPublicFormAbuse } from "../anti-abuse";
-import { RATE_LIMITS } from "../auth/rate-limit";
+import { RATE_LIMITS, consumeRateLimit, hashIdentifier } from "../auth/rate-limit";
 import { getClientIp, getUserAgent } from "../audit";
 import { sendEmail } from "../email/send";
 import {
@@ -90,17 +91,52 @@ function extractStepFields(
 /**
  * Begins a new agreement and redirects to the first step.
  *
- * `sibling` reuses guardian, address, and medical-provider details from the draft
- * just submitted, because Document 9 requires one agreement per student and a family
- * of three should not retype the same address three times. Student-specific and
- * consent fields are never carried across — each child needs their own medical
- * history, and each agreement needs its own freely-given signature.
+ * `sibling` reuses guardian, address, and medical-provider details, because Document 9
+ * requires one agreement per student and a family of three should not retype the same
+ * address three times. Student-specific and consent fields are never carried across — each
+ * child needs their own medical history, and each agreement needs its own freely-given
+ * signature and media-release decision.
+ *
+ * ⚠️  THIS READS THE *SUBMITTED* DRAFT ON PURPOSE — via loadDraft(), not loadActiveDraft().
+ *
+ * That is the whole reason submit retains a stripped draft instead of deleting it. The
+ * original implementation called discardDraft() on submit, which deleted the record and
+ * cleared the cookie, so by the time the family clicked "enroll another child" there was
+ * nothing to copy from and this silently seeded an empty object. Sibling pre-fill appeared
+ * to be implemented and never once worked.
  */
 export async function startEnrollmentAction(sibling = false): Promise<void> {
+  /**
+   * Rate limit only — no honeypot, no timing check.
+   *
+   * Starting an agreement carries no user input, so there is nothing for a honeypot to
+   * catch and nothing for a fill-time floor to measure; applying either here would only
+   * create a way to reject a family on their very first click. But this action DOES write
+   * a database record, so without any limit a bot could create unbounded drafts. The cap is
+   * deliberately generous — a family legitimately starting several agreements for several
+   * children in one sitting must never hit it.
+   */
+  const ip = await getClientIp();
+  if (ip) {
+    const limited = await consumeRateLimit(
+      `enroll-start:ip:${hashIdentifier(ip)}`,
+      RATE_LIMITS.ENROLL_START_PER_IP.limit,
+      RATE_LIMITS.ENROLL_START_PER_IP.windowSeconds,
+    );
+    if (!limited.allowed) {
+      console.warn("[anti-abuse] enroll-start rate limit hit");
+      // Deliberately not an error page: send them somewhere useful. The enrollment page
+      // itself carries the school's phone number.
+      redirect("/enroll");
+    }
+  }
+
   let seed: Record<string, unknown> = {};
 
   if (sibling) {
     const previous = await loadDraft();
+    // siblingSeed is idempotent: the retained draft has already been narrowed to these
+    // fields, so re-filtering is a no-op rather than a second, lossier pass.
     if (previous) seed = siblingSeed(previous.data);
   }
 
@@ -125,7 +161,14 @@ export async function saveEnrollmentStep(
     const step = getStep(slug);
     if (!step?.schema) return failure("That step does not exist.");
 
-    // Abuse checks first — before any database work.
+    /**
+     * Abuse checks first — before any database work.
+     *
+     * NOTE `enforceMinFillTime` is deliberately absent (defaults to false). A step save
+     * must never be rejected for being "too fast": a family using browser autofill can
+     * legitimately complete the guardian step in under two seconds, and rejecting them
+     * loses an enrollment. The floor is enforced on the final submit instead.
+     */
     const abuse = await checkPublicFormAbuse(
       formData,
       RATE_LIMITS.ENROLL_STEP_PER_IP,
@@ -133,9 +176,15 @@ export async function saveEnrollmentStep(
     );
     if (!abuse.ok) return failure(abuse.message ?? "Submission rejected.");
 
-    // A missing draft cookie means the visitor cleared cookies or the draft expired.
-    // Start a fresh one rather than dead-ending them on a form that cannot save.
-    if (!(await getDraftId())) {
+    /**
+     * Ensure there is an ACTIVE draft to write into.
+     *
+     * Checking the cookie alone is not enough: after a submit the cookie still points at
+     * the stripped, submitted carry-over record, and writing student data back into that
+     * would resurrect a signed agreement as an editable draft. loadActiveDraft() returns
+     * null for a submitted draft, so this starts a clean one instead.
+     */
+    if (!(await loadActiveDraft())) {
       await startDraft();
     }
 
@@ -199,13 +248,35 @@ export async function submitEnrollmentAction(
       );
     }
 
+    /**
+     * Already submitted — almost certainly the back button, or a second click.
+     *
+     * Handled here rather than falling through: the retained draft has been stripped to
+     * just the carry-over fields, so the whole-agreement re-validation below would fail
+     * with a confusing "some required information is missing" on an agreement the family
+     * actually completed. Send them to the confirmation they have already earned.
+     */
+    if (draft.submittedAt) redirect("/enroll/submitted");
+
+    /**
+     * The final submit is the expensive, irreversible action — it creates an application
+     * and sends email — so it keeps the full check set, including the minimum fill time.
+     *
+     * That floor is safe HERE and unsafe on a step save: reaching this point requires
+     * passing through the review page and typing a full legal name, so a sub-two-second
+     * submission genuinely is a script.
+     */
     const abuse = await checkPublicFormAbuse(
       formData,
       RATE_LIMITS.ENROLL_SUBMIT_PER_IP,
       "enroll-submit",
-      typeof draft.data.guardianEmail === "string"
-        ? draft.data.guardianEmail
-        : undefined,
+      {
+        identifier:
+          typeof draft.data.guardianEmail === "string"
+            ? draft.data.guardianEmail
+            : undefined,
+        enforceMinFillTime: true,
+      },
     );
     if (!abuse.ok) return failure(abuse.message ?? "Submission rejected.");
 
@@ -307,7 +378,7 @@ export async function submitEnrollmentAction(
       // certainly a double-click or a retried request. Treat it as the success it
       // effectively is rather than showing an error or creating a second record.
       if (error instanceof MongoServerError && error.code === 11000) {
-        await discardDraft();
+        await retainDraftForSibling();
         redirect("/enroll/submitted");
       }
       throw error;
@@ -356,7 +427,7 @@ export async function submitEnrollmentAction(
       },
     );
 
-    await discardDraft();
+    await retainDraftForSibling();
     redirect("/enroll/submitted");
   });
 }

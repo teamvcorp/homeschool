@@ -62,10 +62,21 @@ export function SubmitButton({
 /**
  * The two anti-abuse fields every public form carries.
  *
- * The honeypot is positioned OFF-SCREEN rather than `type="hidden"` or
- * `display:none` — some bots skip hidden inputs specifically, and some password
- * managers helpfully fill them. `tabIndex={-1}` plus `aria-hidden` keep it away from
- * keyboard and screen-reader users, so a real person never encounters it.
+ * ⚠️  THE HONEYPOT IS A CHECKBOX ON PURPOSE. DO NOT MAKE IT A TEXT INPUT.
+ *
+ * The first version of this component rendered an off-screen TEXT INPUT named
+ * "company_website" with a matching label. That broke enrollment for real families in
+ * production: Chrome and Edge address-autofill filled it on the guardian step, the
+ * honeypot check saw a value, and a genuine submission was rejected with a generic
+ * "we could not process that" error. Production log confirming it:
+ *   [anti-abuse] honeypot filled on enroll-step
+ *
+ * Browser autofill fills text and select fields. It does NOT tick checkboxes. A checkbox
+ * trap therefore keeps the anti-bot value while making a false positive from autofill
+ * essentially impossible — an unchecked checkbox submits no value at all.
+ *
+ * Note that `left: -9999px` was never the problem and is not the fix; off-screen fields
+ * are still very much visible to autofill. The input TYPE is what matters.
  *
  * `timestamp` is minted server-side (it is HMAC-signed) and passed in as a prop.
  */
@@ -75,19 +86,27 @@ export function AntiAbuseFields({ timestamp }: { timestamp: string }) {
       <input type="hidden" name={TIMESTAMP_FIELD} value={timestamp} />
       <div
         aria-hidden="true"
-        // Inline style rather than a utility class: the intent is "park this far
-        // off-screen", and expressing -9999px through Tailwind's spacing scale
-        // produces a meaningless number.
-        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}
+        // Parked off-screen rather than display:none, because some bots skip
+        // display:none fields. Combined with tabIndex={-1} and aria-hidden, no keyboard
+        // or screen-reader user can reach it.
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+        }}
       >
-        <label htmlFor={HONEYPOT_FIELD}>Company website (leave this blank)</label>
+        {/* Label text is deliberately generic — nothing an autofill heuristic classifies. */}
+        <label htmlFor={HONEYPOT_FIELD}>Leave this unchecked</label>
         <input
           id={HONEYPOT_FIELD}
           name={HONEYPOT_FIELD}
-          type="text"
+          type="checkbox"
+          value="1"
           tabIndex={-1}
           autoComplete="off"
-          defaultValue=""
+          defaultChecked={false}
         />
       </div>
     </>

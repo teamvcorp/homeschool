@@ -7,7 +7,7 @@ import {
   gradeAgeWarning,
   type StepSlug,
 } from "@/lib/validation/enrollment";
-import { loadDraft } from "@/lib/enrollment/draft";
+import { loadActiveDraft } from "@/lib/enrollment/draft";
 import { ACKNOWLEDGMENT_LIST } from "@/lib/enrollment/agreement";
 import { issueFormTimestamp } from "@/lib/anti-abuse";
 import { saveEnrollmentStep } from "@/lib/actions/enrollment";
@@ -45,11 +45,12 @@ export default async function EnrollStepPage({
   const step = getStep(slug);
   if (!step) notFound();
 
-  const draft = await loadDraft();
+  const draft = await loadActiveDraft();
 
-  // No draft yet — a visitor deep-linked into the middle of the wizard, or their
-  // cookie expired. Send them to the start rather than showing an empty form that
-  // silently cannot save.
+  // No ACTIVE draft. Either the visitor deep-linked into the middle of the wizard, their
+  // cookie expired, or they already submitted this agreement (a submitted draft is retained
+  // only so the sibling flow can copy the contact details — it must never be resumed).
+  // Send them to the start rather than showing a form that silently cannot save.
   if (!draft) redirect("/enroll");
 
   const data = draft.data as Record<string, unknown>;

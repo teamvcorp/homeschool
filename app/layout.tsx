@@ -24,7 +24,15 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://thevacorp.com";
+/**
+ * The site's absolute origin, used for metadataBase, Open Graph URLs, and JSON-LD.
+ *
+ * The localhost fallback is deliberate — see the fuller note in app/sitemap.ts. In short: a
+ * guessed-domain fallback silently attributes this school's pages to another organisation
+ * when the environment variable is missing, whereas localhost makes the misconfiguration
+ * obvious.
+ */
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
