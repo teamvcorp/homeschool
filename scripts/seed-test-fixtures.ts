@@ -66,6 +66,32 @@ async function main() {
   }
 
   await createIndexes();
+
+  /**
+   * `--clear-rate-limits` makes the e2e suite repeatable.
+   *
+   * The public enrollment submit is capped per IP per hour. A full harness run spends
+   * several of those, so running the suite twice in an hour trips the limiter and the
+   * later harnesses fail with "We have received several submissions from your
+   * connection recently" — the app working exactly as designed, reported as a test
+   * failure. Diagnosing that from a bare `status=200` wastes a lot of time.
+   *
+   * Safe to clear because `rateLimits` is ephemeral by design: every document carries a
+   * TTL and would expire on its own. Nothing here is a record of anything.
+   *
+   * Deliberately opt-in rather than automatic — a reset that happened on every seed
+   * would quietly hide a genuine limiter regression from the harness that tests it.
+   */
+  if (process.argv.includes("--clear-rate-limits")) {
+    const { getMongoClient: getClient } = await import("../lib/mongodb");
+    const client = await getClient();
+    const removed = await client
+      .db(dbName)
+      .collection("rateLimits")
+      .deleteMany({});
+    console.log(`  cleared ${removed.deletedCount} rate-limit counter(s)`);
+  }
+
   const users = await usersCollection();
   const now = new Date();
 

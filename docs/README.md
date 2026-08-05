@@ -13,6 +13,7 @@ not obvious from the code.
 | [`forms-and-validation.md`](./forms-and-validation.md) | **Before touching the enrollment form or the anti-abuse checks.** Records a production incident where the honeypot rejected real families. |
 | [`design-system.md`](./design-system.md) | Adding a page or component; picking a colour. |
 | [`content-sources.md`](./content-sources.md) | Editing site copy — traces each page to its accreditation-package source. |
+| [`verification.md`](./verification.md) | **Before running or adding a test.** How the suite works, and the traps that make test results lie. |
 
 ## What this project is
 
@@ -47,6 +48,23 @@ npm run seed:admin -- --email you@example.com --name "Your Name"
 npm run dev
 ```
 
+**`MONGODB_DB` is required and must be a test database locally.** It used to default to
+`va_school` — the live database — which is how a destructive test helper once reached
+real records. `lib/env.ts` now refuses to use the production database unless
+`NODE_ENV=production`, so set `MONGODB_DB=va_school_test` in `.env.local`.
+
+| Environment | `MONGODB_DB` |
+|---|---|
+| Local / development | `va_school_test` |
+| Vercel Production | `va_school` |
+
+A deliberate operation against live data (seeding the first admin, creating indexes)
+opts in per command:
+
+```bash
+ALLOW_PRODUCTION_DB=1 MONGODB_DB=va_school npm run seed:admin -- --email ... --name "..."
+```
+
 ## Scripts
 
 | Command | Does |
@@ -59,6 +77,11 @@ npm run dev
 | `npm run db:ping` | Connectivity + collection/index inventory (prints no secrets) |
 | `npm run db:init` | Create indexes |
 | `npm run seed:admin` | Create the first administrator |
+| `npm run dev:test` | Dev server forced onto `va_school_test` |
+| `npm run check:email` | School email rule, 17 assertions, no database needed |
+| `npm run e2e` | All five end-to-end harnesses (needs `E2E_ADMIN_PASSWORD`) |
+| `npm run seed:test-fixtures` | Fixture accounts; `-- --clear-rate-limits` resets the limiter |
+| `npm run db:reset-test` | **Destructive.** Empties the TEST database; refuses production. Needs `-- --yes` |
 
 If the editor reports `PageProps` as missing, run `npm run typegen`.
 

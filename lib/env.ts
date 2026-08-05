@@ -37,8 +37,11 @@ const schema = z.object({
       "MONGODB_URI must start with mongodb:// or mongodb+srv://",
     ),
 
-  /** Database name. Defaults so a URI without a path still works. */
-  MONGODB_DB: z.string().min(1).default("va_school"),
+  /**
+   * Database name. DELIBERATELY HAS NO DEFAULT OUTSIDE PRODUCTION — see
+   * resolveDatabaseName() below for why that matters more than the convenience.
+   */
+  MONGODB_DB: z.string().min(1).optional(),
 
   /**
    * Signs session JWTs. At least 32 bytes of real entropy — this single value is
@@ -99,7 +102,90 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
-export type Env = z.infer<typeof schema>;
+type RawEnv = z.infer<typeof schema>;
+
+/** MONGODB_DB is resolved and guaranteed present by the time callers see it. */
+export type Env = Omit<RawEnv, "MONGODB_DB"> & { MONGODB_DB: string };
+
+/**
+ * The live database. Named here in code ON PURPOSE — it is the thing being protected,
+ * and a guard that reads its own boundary out of configuration guards nothing.
+ */
+export const PRODUCTION_DB_NAME = "va_school";
+
+/** Names that must never be the target of a production deployment. */
+const NON_PRODUCTION_PATTERN = /test|dev|staging|sandbox|scratch|tmp/i;
+
+/**
+ * SEPARATION OF DEVELOPMENT AND PRODUCTION DATA.
+ * ---------------------------------------------------------------------------
+ * This function exists because of a real incident on this project: a destructive test
+ * helper was run against the LIVE database and permanently destroyed a family's
+ * enrollment application.
+ *
+ * The mechanism that allowed it was a one-line convenience — MONGODB_DB used to default
+ * to "va_school", the production database. So forgetting to set it did not fail; it
+ * silently connected local development, and anything local development did, to live
+ * records. A default that points at production means the SAFE path requires remembering
+ * something, and the DANGEROUS path is what happens when you forget. That is backwards.
+ *
+ * Now:
+ *   - Outside production, MONGODB_DB is REQUIRED. Forgetting it is a loud error.
+ *   - Outside production, naming the production database is REFUSED outright.
+ *   - In production, a database name that looks like a test database is REFUSED, because
+ *     silently serving an empty school is its own kind of outage.
+ *
+ * ESCAPE HATCH: some operations against production are legitimate and necessary — seeding
+ * the first administrator, creating indexes. Those set ALLOW_PRODUCTION_DB=1 explicitly
+ * for that one command:
+ *
+ *     ALLOW_PRODUCTION_DB=1 MONGODB_DB=va_school npm run seed:admin -- --email ...
+ *
+ * The override is per-invocation and has to be typed out, which is the point: it makes
+ * touching live data a deliberate act rather than a forgotten variable.
+ */
+function resolveDatabaseName(raw: RawEnv): string {
+  const isProd = raw.NODE_ENV === "production";
+  const allowProductionDb = process.env.ALLOW_PRODUCTION_DB === "1";
+
+  // In production the production database is the correct default. Everywhere else,
+  // there is no safe default, so there is no default.
+  const name = raw.MONGODB_DB ?? (isProd ? PRODUCTION_DB_NAME : undefined);
+
+  if (!name) {
+    throw new Error(
+      `MONGODB_DB is not set.\n\n` +
+        `  Outside production this has no default, on purpose: it used to default to\n` +
+        `  "${PRODUCTION_DB_NAME}" (the LIVE database), so forgetting it pointed local\n` +
+        `  development at real student records.\n\n` +
+        `  Set it in .env.local — for local work use a test database:\n` +
+        `      MONGODB_DB=va_school_test\n`,
+    );
+  }
+
+  if (!isProd && name === PRODUCTION_DB_NAME && !allowProductionDb) {
+    throw new Error(
+      `REFUSING to use the production database "${name}" with NODE_ENV=${raw.NODE_ENV}.\n\n` +
+        `  This is real student data, and local code paths include destructive test\n` +
+        `  helpers. Use a test database instead:\n` +
+        `      MONGODB_DB=va_school_test\n\n` +
+        `  If you genuinely mean to act on live data (seeding an admin, creating\n` +
+        `  indexes), say so explicitly for that one command:\n` +
+        `      ALLOW_PRODUCTION_DB=1 MONGODB_DB=${PRODUCTION_DB_NAME} npm run <script>\n`,
+    );
+  }
+
+  if (isProd && NON_PRODUCTION_PATTERN.test(name)) {
+    throw new Error(
+      `REFUSING to run a PRODUCTION deployment against "${name}".\n\n` +
+        `  That name looks like a test database. Serving the live site from one would\n` +
+        `  show an empty school and write real enrollments somewhere they will be lost.\n` +
+        `  Set MONGODB_DB=${PRODUCTION_DB_NAME} in the production environment.\n`,
+    );
+  }
+
+  return name;
+}
 
 let cached: Env | null = null;
 
@@ -129,7 +215,9 @@ export function getEnv(): Env {
     );
   }
 
-  cached = parsed.data;
+  // Resolved AFTER schema validation so the operator sees missing secrets and a
+  // misdirected database in the same run rather than one per attempt.
+  cached = { ...parsed.data, MONGODB_DB: resolveDatabaseName(parsed.data) };
   return cached;
 }
 
