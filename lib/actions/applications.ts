@@ -8,9 +8,15 @@ import {
   APPLICATION_TRANSITIONS,
   APPLICATION_STATUSES,
 } from "../db/enums";
-import type { StudentDoc } from "../db/types";
-import { requireCapability } from "../dal";
+import type { ApplicationStatus } from "../db/enums";
+import type { StudentDoc, EnrollmentApplicationDoc } from "../db/types";
+import { requireCapability, type AuthenticatedUser } from "../dal";
 import { logAudit } from "../audit";
+import { notifyFamily } from "../email/notify";
+import {
+  intakeScheduledEmail,
+  applicationAcceptedEmail,
+} from "../email/templates";
 import { agreementHash, CONSENT_VERSION } from "../enrollment/agreement";
 import {
   buildSchoolEmailLocalPart,
@@ -98,9 +104,125 @@ export async function transitionApplicationAction(
       meta: { from: application.status, to: status },
     });
 
+    /**
+     * Tell the family — AFTER the write and the audit entry, never before.
+     *
+     * The status change is already committed at this point and must stay committed
+     * whatever email does. notifyFamily() cannot throw, and its result is recorded but
+     * never used to undo anything. See lib/email/notify.ts.
+     */
+    await notifyFamilyOfStatus(application, status, user);
+
     revalidatePath("/admin/applications");
     revalidatePath(`/admin/applications/${applicationId}`);
     return success(undefined, `Status updated to ${status}.`);
+  });
+}
+
+/**
+ * Which statuses a family hears about, and in what words.
+ *
+ * `assessed` is absent on purpose: it is internal review language, and a family reading
+ * "your application has been assessed" learns nothing they can act on.
+ *
+ * `declined` is absent ON PURPOSE AND BY DECISION. A small school declining a family is a
+ * phone call, not an automated message. The admin review screen shows a standing prompt to
+ * make that call so it cannot be quietly skipped — see the Callout in
+ * app/(secure)/admin/applications/[id]/page.tsx.
+ */
+const NOTIFIED_STATUSES = ["intakeScheduled", "accepted"] as const;
+
+type NotifiedStatus = (typeof NOTIFIED_STATUSES)[number];
+
+function isNotifiedStatus(status: ApplicationStatus): status is NotifiedStatus {
+  return (NOTIFIED_STATUSES as readonly ApplicationStatus[]).includes(status);
+}
+
+/**
+ * Sends the family the message for a milestone, at most once per milestone.
+ *
+ * `familyNotifiedStatuses` is a SECOND line of defence, and worth being precise about.
+ *
+ * The first line is APPLICATION_TRANSITIONS, which is strictly forward-only: `accepted`
+ * may only move to `declined` or `withdrawn`, so an administrator cannot re-enter a status
+ * and re-trigger its email. Today, that alone prevents duplicates.
+ *
+ * This guard exists because that is a property of a table someone will eventually edit.
+ * The day a self-transition or a "move back a step" is added — both reasonable requests —
+ * the failure mode is a family receiving "congratulations, your child is accepted" three
+ * times, which reads as a broken school at exactly the moment they are deciding whether to
+ * trust one. The guard makes that edit safe instead of dangerous.
+ *
+ * The flag is written BEFORE the send attempt. That ordering is deliberate: a failed send
+ * is queued for retry by lib/email/send.ts, so treating "attempted" as "notified" is
+ * correct, whereas writing the flag afterwards would let a crash between send and write
+ * produce a duplicate on the next attempt. Duplicate delivery is the worse failure here.
+ */
+async function notifyFamilyOfStatus(
+  application: EnrollmentApplicationDoc,
+  status: ApplicationStatus,
+  user: AuthenticatedUser,
+): Promise<void> {
+  if (!isNotifiedStatus(status)) return;
+
+  const alreadySent = application.familyNotifiedStatuses ?? [];
+  if (alreadySent.includes(status)) return;
+
+  const locale = application.preferredLanguage ?? "en";
+  const shared = {
+    guardianName: application.guardian.name,
+    studentName: application.studentLegalName,
+    locale,
+  };
+
+  const rendered =
+    status === "intakeScheduled"
+      ? intakeScheduledEmail(shared)
+      : applicationAcceptedEmail(shared);
+
+  const template =
+    status === "intakeScheduled" ? "intakeScheduled" : "applicationAccepted";
+
+  const applications = await applicationsCollection();
+  await applications.updateOne(
+    { _id: application._id },
+    {
+      $addToSet: { familyNotifiedStatuses: status },
+      $set: { updatedAt: new Date() },
+    },
+  );
+
+  const outcome = await notifyFamily(
+    {
+      to: application.guardian.email,
+      ...rendered,
+      template,
+      /**
+       * The LOCALE MUST BE IN `data`. A failed send is re-rendered later by
+       * /api/email/retry from `template` + `data`, so omitting it would make every
+       * retried message silently revert to English.
+       */
+      data: {
+        guardianName: shared.guardianName,
+        studentName: shared.studentName,
+        locale,
+      },
+      relatedId: application._id,
+    },
+    `application ${status}`,
+  );
+
+  await logAudit({
+    actor: user,
+    action: "application.notifyFamily",
+    subjectId: application._id,
+    subjectType: "application",
+    // Status and delivery outcome only — never the address or the message body.
+    meta: {
+      status,
+      locale,
+      delivery: outcome.sent ? "sent" : outcome.queued ? "queued" : "failed",
+    },
   });
 }
 

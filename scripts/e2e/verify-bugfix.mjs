@@ -193,7 +193,7 @@ const jar = newJar();
   check(
     "BUG 1: guardian step accepted immediately (the reported failure)",
     r.status === 303,
-    `status=${r.status}`,
+    r.status === 303 ? `status=${r.status}` : `status=${r.status} — ${serverError(r.body)}`,
   );
 }
 

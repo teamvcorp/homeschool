@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { ObjectId, MongoServerError } from "mongodb";
 import { revalidatePath } from "next/cache";
-import { studentsCollection } from "../db/collections";
+import { studentsCollection, applicationsCollection } from "../db/collections";
 import {
   COHORT_IDS,
   STUDENT_STATUSES,
@@ -11,8 +11,12 @@ import {
   IMMUNIZATION_STATUSES,
   MEDIA_RELEASE_CHOICES,
 } from "../db/enums";
-import { requireStudentAccess, requireCapability } from "../dal";
+import type { StudentDoc } from "../db/types";
+import { requireStudentAccess, requireCapability, type AuthenticatedUser } from "../dal";
 import { logAudit } from "../audit";
+import { notifyFamily } from "../email/notify";
+import { enrollmentWelcomeEmail } from "../email/templates";
+import type { Locale } from "../i18n/locales";
 import {
   buildSchoolEmailLocalPart,
   resolveCollision,
@@ -337,6 +341,24 @@ export async function updateSchoolEmailAction(
       meta: { fields: "schoolEmail", emailStatus: status },
     });
 
+    /**
+     * THE WELCOME EMAIL FIRES HERE, NOT AT PROMOTION.
+     *
+     * Promotion generates the address but the Office 365 mailbox does not exist yet, so a
+     * welcome message sent then would hand the family an address that bounces — worse
+     * than saying nothing. It waits until an administrator confirms the mailbox is live,
+     * which is exactly this transition to `active`.
+     *
+     * Three conditions, all necessary:
+     *   - the mailbox is now active;
+     *   - it was NOT already active (so re-saving the form does not re-welcome them);
+     *   - no welcome has been recorded (belt and braces on the same idea).
+     */
+    const becameActive = status === "active" && student.schoolEmailStatus !== "active";
+    if (becameActive && !student.welcomeEmailSentAt && address) {
+      await notifyWelcome(student, address, user);
+    }
+
     revalidatePath(`/admin/students/${studentId}`);
     revalidatePath("/admin/students");
 
@@ -348,5 +370,78 @@ export async function updateSchoolEmailAction(
           ? `Saved as ${address}, marked pending. Create the Office 365 mailbox, then set it to active.`
           : `Saved as ${address} (${status}).`,
     );
+  });
+}
+
+/**
+ * Sends the "you are enrolled, here is the school account" message.
+ *
+ * WHY THE LANGUAGE IS FETCHED FROM THE APPLICATION
+ *
+ * The family's language choice was made while applying, so it lives on the
+ * enrollmentApplications document, not the student record. It is deliberately not copied
+ * onto the student at promotion: the application is the record of what the family told us
+ * during enrollment, and duplicating it would create two places that can disagree.
+ * Missing application, or a family that never touched the toggle, means English.
+ *
+ * `welcomeEmailSentAt` is written BEFORE the send attempt, for the same reason the
+ * application notifications record their status first: a failed send is queued for retry,
+ * so "attempted" is the right thing to record, and a crash between send and write must not
+ * be able to produce a second welcome email.
+ */
+async function notifyWelcome(
+  student: StudentDoc,
+  schoolEmail: string,
+  user: AuthenticatedUser,
+): Promise<void> {
+  let locale: Locale = "en";
+  if (student.applicationId) {
+    const applications = await applicationsCollection();
+    const application = await applications.findOne(
+      { _id: student.applicationId },
+      { projection: { preferredLanguage: 1 } },
+    );
+    locale = application?.preferredLanguage ?? "en";
+  }
+
+  const students = await studentsCollection();
+  await students.updateOne(
+    { _id: student._id },
+    { $set: { welcomeEmailSentAt: new Date(), updatedAt: new Date() } },
+  );
+
+  const rendered = enrollmentWelcomeEmail({
+    guardianName: student.guardian.name,
+    studentName: student.legalName,
+    schoolEmail,
+    locale,
+  });
+
+  const outcome = await notifyFamily(
+    {
+      to: student.guardian.email,
+      ...rendered,
+      template: "enrollmentWelcome",
+      // The locale must survive into the retry queue, which re-renders from `data`.
+      data: {
+        guardianName: student.guardian.name,
+        studentName: student.legalName,
+        schoolEmail,
+        locale,
+      },
+      relatedId: student._id,
+    },
+    "enrollment welcome",
+  );
+
+  await logAudit({
+    actor: user,
+    action: "student.notifyWelcome",
+    subjectId: student._id,
+    subjectType: "student",
+    meta: {
+      locale,
+      delivery: outcome.sent ? "sent" : outcome.queued ? "queued" : "failed",
+    },
   });
 }

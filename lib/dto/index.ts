@@ -8,6 +8,7 @@ import type {
   TaekwondoRankDoc,
 } from "../db/types";
 import type { AuthenticatedUser } from "../dal";
+import type { Locale } from "../i18n/locales";
 import { can } from "../auth/roles";
 
 /**
@@ -102,12 +103,18 @@ export interface ApplicationDetail extends ApplicationListItem {
     userAgent: string | null;
     agreementHash: string;
     consentVersion: string;
+    /** The language on screen at signing. The hash always covers the English text. */
+    displayLanguage: Locale;
   };
   countersigned: {
     typedName: string;
     signedAt: string;
   } | null;
   reviewNotes: string | null;
+  /** The family's chosen language; status emails are sent in it. */
+  preferredLanguage: Locale;
+  /** Milestones the family has already been emailed about. */
+  familyNotifiedStatuses: string[];
 }
 
 export function toApplicationDetail(
@@ -145,6 +152,11 @@ export function toApplicationDetail(
       userAgent: doc.guardianSignature.userAgent ?? null,
       agreementHash: doc.guardianSignature.agreementHash,
       consentVersion: doc.guardianSignature.consentVersion,
+      /**
+       * The language displayed at signing. Absent on signatures predating translation
+       * support, which were English by definition.
+       */
+      displayLanguage: doc.guardianSignature.displayLanguage ?? "en",
     },
     countersigned: doc.headOfSchoolSignature
       ? {
@@ -153,6 +165,16 @@ export function toApplicationDetail(
         }
       : null,
     reviewNotes: doc.reviewNotes ?? null,
+    /**
+     * The family's language, and what they have already been emailed about.
+     *
+     * Both are shown to staff for practical reasons rather than completeness: the first
+     * tells whoever picks up the phone which language to open with, and the second stops
+     * a well-meaning second email — or, worse, a staff member assuming the system already
+     * told a family something it did not.
+     */
+    preferredLanguage: doc.preferredLanguage ?? "en",
+    familyNotifiedStatuses: doc.familyNotifiedStatuses ?? [],
   };
 }
 

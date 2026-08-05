@@ -293,6 +293,16 @@ export const AUDIT_ACTIONS = [
   "application.statusChange",
   "application.promote",
   "application.countersign",
+  /**
+   * A status-update email was sent to the family (or queued when the send failed).
+   *
+   * Audited because it is an outbound communication to a family about a decision. When a
+   * parent later says "nobody told us", the answer has to be a record, not a memory —
+   * and because sends are idempotent, the absence of this entry is itself meaningful.
+   */
+  "application.notifyFamily",
+  /** The enrolled-student welcome email, sent when the school mailbox went live. */
+  "student.notifyWelcome",
   "document.download",
   "instructor.update",
   "partnership.update",

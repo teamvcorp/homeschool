@@ -8,6 +8,7 @@ import { toApplicationDetail } from "@/lib/dto";
 import { logAudit } from "@/lib/audit";
 import { APPLICATION_TRANSITIONS } from "@/lib/db/enums";
 import { ACKNOWLEDGMENT_LIST } from "@/lib/enrollment/agreement";
+import { LOCALE_LABELS } from "@/lib/i18n/locales";
 import SecureHeader from "@/app/components/secure/SecureHeader";
 import { ADMIN_NAV } from "@/app/components/secure/nav";
 import { FactList } from "@/app/components/ui/PageHeader";
@@ -123,6 +124,47 @@ export default async function ApplicationDetailPage({
           </div>
         ) : null}
 
+        {/*
+          A DECLINE SENDS NO EMAIL. That is a deliberate decision, not a gap: telling a
+          family their child was not accepted is a phone call. But a decision made by
+          software and communicated by nobody is worse than either, so this prompt stands
+          on the record until someone reads it — the one place staff cannot miss it.
+        */}
+        {a.status === "declined" ? (
+          <div className="mt-6">
+            <Callout title="Please call this family" variant="statute">
+              No automatic email is sent when an application is declined. This family has
+              not been told. Call{" "}
+              <a href={`tel:${a.guardianPhone}`} className="font-semibold underline">
+                {a.guardianPhone}
+              </a>{" "}
+              and speak to {a.guardianName}
+              {a.preferredLanguage !== "en" ? (
+                <>
+                  {" "}
+                  &mdash; they applied in{" "}
+                  <strong>{LOCALE_LABELS[a.preferredLanguage]}</strong>, so arrange an
+                  interpreter if you need one
+                </>
+              ) : null}
+              .
+            </Callout>
+          </div>
+        ) : null}
+
+        {/*
+          What the family already knows. Prevents a staff member either duplicating a
+          message or assuming the system delivered news it deliberately withheld.
+        */}
+        {a.familyNotifiedStatuses.length > 0 ? (
+          <p className="mt-4 text-sm text-ink-subtle">
+            Family emailed about:{" "}
+            <span className="font-medium text-navy-800">
+              {a.familyNotifiedStatuses.join(", ")}
+            </span>
+          </p>
+        ) : null}
+
         <div className="mt-8 grid gap-8 lg:grid-cols-3">
           {/* ---------------- Record ---------------- */}
           <div className="flex flex-col gap-6 lg:col-span-2">
@@ -169,6 +211,21 @@ export default async function ApplicationDetailPage({
                       ),
                     },
                     { label: "Address", value: a.guardianAddress },
+                    {
+                      /**
+                       * Shown to staff so whoever calls knows which language to open
+                       * with. Status emails are already sent in it automatically.
+                       */
+                      label: "Language",
+                      value:
+                        a.preferredLanguage === "en" ? (
+                          "English"
+                        ) : (
+                          <span className="font-semibold text-gold-700">
+                            {LOCALE_LABELS[a.preferredLanguage]}
+                          </span>
+                        ),
+                    },
                     { label: "Emergency contact", value: a.emergencyContactName ?? "—" },
                     { label: "Emergency phone", value: a.emergencyContactPhone ?? "—" },
                   ]}
@@ -293,6 +350,17 @@ export default async function ApplicationDetailPage({
                     },
                     { label: "IP address", value: a.signature.ip ?? "—" },
                     { label: "Consent version", value: a.signature.consentVersion },
+                    {
+                      /**
+                       * The language on screen at signing. The fingerprint below always
+                       * covers the ENGLISH text, because the English text is the
+                       * agreement — a translation is shown alongside so the family
+                       * understands it, never as the instrument. Recording both makes the
+                       * evidence stronger: the exact terms, and how they were presented.
+                       */
+                      label: "Signed while reading",
+                      value: LOCALE_LABELS[a.signature.displayLanguage],
+                    },
                     {
                       label: "Agreement fingerprint",
                       value: (

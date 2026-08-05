@@ -394,6 +394,14 @@ export const behaviorResponseSteps = [
    ADMISSIONS — Document 4 §4.2
    ========================================================================== */
 
+/**
+ * The four-step admissions process, for the public pages.
+ *
+ * ⚠️  ALSO TRANSLATED, SEPARATELY. The confirmation email needs these steps in the
+ * family's own language, so lib/i18n/messages/*.ts carries them under
+ * `email.confirmation.step{1..4}.*`. This array is the English marketing copy; those keys
+ * are the email copy. EDIT BOTH — they will not warn you.
+ */
 export const admissionsSteps = [
   {
     title: "Submit an enrollment application",

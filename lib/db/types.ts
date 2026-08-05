@@ -1,4 +1,5 @@
 import type { ObjectId } from "mongodb";
+import type { Locale } from "../i18n/locales";
 import type {
   Role,
   CohortId,
@@ -127,6 +128,17 @@ export interface StudentDoc extends Base {
   schoolEmailStatus?: SchoolEmailStatus;
   /** When an administrator confirmed the Office 365 mailbox was live. */
   schoolEmailActivatedAt?: Date | null;
+  /**
+   * When the family was sent the "you are enrolled" welcome message.
+   *
+   * The welcome email is deliberately NOT sent at promotion: the school email address is
+   * generated there but the Office 365 mailbox does not exist yet, so telling a family
+   * their address at that moment hands them something that bounces. It is sent when an
+   * administrator flips the mailbox to `active`.
+   *
+   * Doubles as the idempotency guard — a second activation must not re-welcome them.
+   */
+  welcomeEmailSentAt?: Date | null;
   guardian: GuardianContact;
   medical: MedicalInfo;
   mediaRelease: MediaReleaseChoice;
@@ -161,6 +173,19 @@ export interface SignatureRecord {
   agreementHash: string;
   /** Which wording version was displayed. */
   consentVersion: string;
+  /**
+   * The language the signer was READING when they signed.
+   *
+   * `agreementHash` always covers the ENGLISH text, because the English text is the
+   * agreement — a translation is shown beneath it so the family understands what they
+   * are signing, never as the instrument itself.
+   *
+   * Recording the display language therefore does not weaken the evidence, it
+   * STRENGTHENS it: paired with the hash, the school can show both the exact terms and
+   * the language in which they were presented. Absent on signatures predating
+   * translation support, which were English by definition.
+   */
+  displayLanguage?: Locale;
 }
 
 export interface EnrollmentApplicationDoc extends Base {
@@ -205,6 +230,28 @@ export interface EnrollmentApplicationDoc extends Base {
   /** Internal notes; never shown to the family. */
   reviewNotes?: string;
   emailStatus: EmailStatus;
+
+  /**
+   * The language the family chose while applying. Status notifications are sent in it.
+   *
+   * Captured at submission from the language cookie. Absent means English — both for
+   * applications predating this feature and for anyone who never touched the toggle.
+   */
+  preferredLanguage?: Locale;
+
+  /**
+   * Statuses the family has ALREADY been emailed about.
+   *
+   * The idempotency guard for notifications. Without it, an administrator who re-saves
+   * the status form, or moves a status back and then forward again, emails the family
+   * twice — and "congratulations, you're accepted" arriving three times reads as a
+   * broken system at exactly the moment a family is deciding whether to trust the
+   * school.
+   *
+   * Recorded per status rather than as a single timestamp so each milestone is tracked
+   * independently.
+   */
+  familyNotifiedStatuses?: ApplicationStatus[];
 }
 
 /**

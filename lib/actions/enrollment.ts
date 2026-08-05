@@ -30,6 +30,7 @@ import { checkFormFingerprint, consumeFormRateLimit } from "../anti-abuse";
 import { RATE_LIMITS, consumeRateLimit, hashIdentifier } from "../auth/rate-limit";
 import { getClientIp, getUserAgent } from "../audit";
 import { sendEmail, queueEmail } from "../email/send";
+import { getLocale } from "../i18n/server";
 import {
   enrollmentConfirmationEmail,
   newApplicationNotificationEmail,
@@ -424,6 +425,13 @@ export async function submitEnrollmentAction(
     const now = new Date();
     const ip = await getClientIp();
     const userAgent = await getUserAgent();
+    /**
+     * The language the family used. Persisted for two distinct purposes:
+     *   - `preferredLanguage`, so every later status email reaches them in it;
+     *   - `guardianSignature.displayLanguage`, as part of the signature evidence.
+     * Read from the cookie and narrowed to a supported locale by getLocale().
+     */
+    const locale = await getLocale();
 
     const application: EnrollmentApplicationDoc = {
       status: "submitted",
@@ -471,8 +479,22 @@ export async function submitEnrollmentAction(
         signedAt: now,
         ip,
         userAgent,
+        /**
+         * ⚠️  ALWAYS THE ENGLISH TEXT. agreementHash() hashes the English agreement
+         * regardless of the language on screen, because the English text IS the
+         * agreement — a translation is displayed beneath it so the family understands
+         * what they are signing, never as the instrument itself. Routing a translation
+         * in here would silently change what every signature attests to; that is what
+         * scripts/check-agreement-hash.ts exists to catch.
+         */
         agreementHash: agreementHash(),
         consentVersion: CONSENT_VERSION,
+        /**
+         * ...and the language they were READING. Paired with the hash, the school can
+         * show both the exact terms and the language in which they were presented, which
+         * is stronger evidence than the hash alone.
+         */
+        displayLanguage: locale,
       },
       headOfSchoolSignature: null,
 
@@ -482,6 +504,9 @@ export async function submitEnrollmentAction(
       idempotencyKey: idempotencyKeyFor(draftId),
       promotedStudentId: null,
       emailStatus: "queued",
+      /** Status notifications are sent in this language. */
+      preferredLanguage: locale,
+      familyNotifiedStatuses: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -511,6 +536,7 @@ export async function submitEnrollmentAction(
     const confirmation = enrollmentConfirmationEmail({
       guardianName: a.guardianName,
       studentName: a.studentLegalName,
+      locale,
     });
     const notification = newApplicationNotificationEmail({
       studentName: a.studentLegalName,
@@ -524,7 +550,16 @@ export async function submitEnrollmentAction(
       to: a.guardianEmail,
       ...confirmation,
       template: "enrollmentConfirmation",
-      data: { guardianName: a.guardianName, studentName: a.studentLegalName },
+      /**
+       * The LOCALE MUST BE STORED. /api/email/retry re-renders a queued message from
+       * `template` + `data`, with no request and no cookie in scope, so omitting it makes
+       * every retried confirmation silently revert to English.
+       */
+      data: {
+        guardianName: a.guardianName,
+        studentName: a.studentLegalName,
+        locale,
+      },
       relatedId: null,
     };
     const schoolEmail = {

@@ -303,7 +303,9 @@ const submitted = await postAction("/enroll/sign", signPage4.body, {
 check(
   "Valid signature submits successfully",
   submitted.status === 303,
-  `status=${submitted.status} location=${submitted.location}`,
+  submitted.status === 303
+    ? `status=${submitted.status} location=${submitted.location}`
+    : `status=${submitted.status} — ${serverError(submitted.body)}`,
 );
 check(
   "Draft cookie retained after submit (sibling carry-over needs it)",

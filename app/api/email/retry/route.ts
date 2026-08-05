@@ -7,7 +7,11 @@ import {
   enrollmentConfirmationEmail,
   newApplicationNotificationEmail,
   inquiryNotificationEmail,
+  intakeScheduledEmail,
+  applicationAcceptedEmail,
+  enrollmentWelcomeEmail,
 } from "@/lib/email/templates";
+import { coerceLocale } from "@/lib/i18n/locales";
 
 /**
  * EMAIL RETRY DRAINER
@@ -50,6 +54,7 @@ function rerender(template: string, data: Record<string, unknown>) {
       return enrollmentConfirmationEmail({
         guardianName: s("guardianName"),
         studentName: s("studentName"),
+        locale: coerceLocale(data.locale),
       });
     case "newApplicationNotification":
       return newApplicationNotificationEmail({
@@ -66,6 +71,38 @@ function rerender(template: string, data: Record<string, unknown>) {
         email: s("email"),
         phone: s("phone") || undefined,
         message: s("message"),
+      });
+
+    /**
+     * FAMILY STATUS NOTIFICATIONS.
+     *
+     * ⚠️  EVERY ONE OF THESE MUST READ `locale` FROM `data`. A queued message is
+     * re-rendered here, long after the request that created it, so the locale has to
+     * travel in the stored data — there is no cookie and no request context at this
+     * point. Forgetting it does not error; it silently sends a Spanish-speaking family
+     * an English letter, which is precisely the failure this feature exists to prevent.
+     *
+     * `coerceLocale` because `data` came out of the database and is therefore untrusted
+     * for the purpose of indexing the message catalogue.
+     */
+    case "intakeScheduled":
+      return intakeScheduledEmail({
+        guardianName: s("guardianName"),
+        studentName: s("studentName"),
+        locale: coerceLocale(data.locale),
+      });
+    case "applicationAccepted":
+      return applicationAcceptedEmail({
+        guardianName: s("guardianName"),
+        studentName: s("studentName"),
+        locale: coerceLocale(data.locale),
+      });
+    case "enrollmentWelcome":
+      return enrollmentWelcomeEmail({
+        guardianName: s("guardianName"),
+        studentName: s("studentName"),
+        schoolEmail: s("schoolEmail"),
+        locale: coerceLocale(data.locale),
       });
     default:
       return null;

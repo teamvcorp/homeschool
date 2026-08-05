@@ -1,6 +1,8 @@
 import "server-only";
 import { env } from "../env";
-import { school, admissionsSteps, tuition } from "../site";
+import { school, tuition, dailyApp } from "../site";
+import { translator, type MessageKey } from "../i18n";
+import { LOCALE_HTML_LANG, type Locale } from "../i18n/locales";
 
 /**
  * EMAIL TEMPLATES
@@ -29,9 +31,14 @@ function esc(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function layout(heading: string, bodyHtml: string): string {
+/**
+ * `locale` sets the `lang` attribute, which is not cosmetic: it drives screen-reader
+ * pronunciation, and for Lao it drives LINE BREAKING, because Lao does not put spaces
+ * between words. Defaults to English so the two pre-existing templates are unaffected.
+ */
+function layout(heading: string, bodyHtml: string, locale: Locale = "en"): string {
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<html lang="${LOCALE_HTML_LANG[locale]}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f7f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f9fc;padding:24px 12px;">
     <tr><td align="center">
@@ -72,8 +79,27 @@ const p = (text: string) =>
 export function enrollmentConfirmationEmail(input: {
   guardianName: string;
   studentName: string;
+  locale?: Locale;
 }): { subject: string; html: string; text: string } {
-  const steps = admissionsSteps
+  const locale = input.locale ?? "en";
+  const tr = translator(locale);
+  const vars = {
+    guardianName: input.guardianName,
+    studentName: input.studentName,
+    monthlyContribution: tuition.monthlyContribution,
+  };
+
+  /**
+   * The four admissions steps come from the CATALOGUE, not from `admissionsSteps` in
+   * lib/site.ts, because that array is the English marketing copy and a translated email
+   * needs translated steps. The English keys mirror it and must stay in sync.
+   */
+  const steps = [1, 2, 3, 4].map((n) => ({
+    title: tr(`email.confirmation.step${n}.title` as MessageKey),
+    detail: tr(`email.confirmation.step${n}.detail` as MessageKey),
+  }));
+
+  const stepsHtml = steps
     .map(
       (step) =>
         `<li style="margin:0 0 10px;font-size:15px;line-height:1.6;color:${INK};"><strong style="color:${NAVY};">${esc(step.title)}</strong><br><span style="color:${MUTED};">${esc(step.detail)}</span></li>`,
@@ -81,43 +107,38 @@ export function enrollmentConfirmationEmail(input: {
     .join("");
 
   const html = layout(
-    `We have your application for ${esc(input.studentName)}`,
+    tr("email.confirmation.heading", vars),
     [
-      p(`Thank you, ${esc(input.guardianName)}.`),
-      p(
-        `Your signed Family Enrollment Agreement has been received. A copy is on file, and the Head of School will be in touch to arrange your intake meeting.`,
-      ),
-      `<p style="margin:22px 0 10px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${GOLD};">What happens next</p>`,
-      `<ol style="margin:0 0 18px;padding-left:20px;">${steps}</ol>`,
-      p(
-        `Enrollment is confirmed once we have met and the first monthly contribution of $${tuition.monthlyContribution} is received. If you indicated Iowa ESA funding, remember that the application is made directly through the Iowa Department of Education — tell us what documentation you need and we will provide it.`,
-      ),
-      p(
-        `Questions before then? Call <a href="tel:${esc(school.phone.replace(/\D/g, ""))}" style="color:${NAVY};">${esc(school.phone)}</a> or reply to this email.`,
-      ),
+      p(esc(tr("email.confirmation.thanks", vars))),
+      p(esc(tr("email.confirmation.body1"))),
+      eyebrow(tr("email.confirmation.nextHeading")),
+      `<ol style="margin:0 0 18px;padding-left:20px;">${stepsHtml}</ol>`,
+      p(esc(tr("email.confirmation.body2", vars))),
+      questionsParagraph(tr),
     ].join(""),
+    locale,
   );
 
   const text = [
-    `We have your application for ${input.studentName}`,
+    tr("email.confirmation.heading", vars),
     ``,
-    `Thank you, ${input.guardianName}.`,
+    tr("email.confirmation.thanks", vars),
     ``,
-    `Your signed Family Enrollment Agreement has been received. A copy is on file, and the Head of School will be in touch to arrange your intake meeting.`,
+    tr("email.confirmation.body1"),
     ``,
-    `WHAT HAPPENS NEXT`,
-    ...admissionsSteps.map((s, i) => `${i + 1}. ${s.title} — ${s.detail}`),
+    tr("email.confirmation.nextHeading").toUpperCase(),
+    ...steps.map((s, i) => `${i + 1}. ${s.title} — ${s.detail}`),
     ``,
-    `Enrollment is confirmed once we have met and the first monthly contribution of $${tuition.monthlyContribution} is received.`,
+    tr("email.confirmation.body2", vars),
     ``,
-    `Questions? Call ${school.phone} or reply to this email.`,
+    tr("email.questions.calls", { phone: school.phone }),
     ``,
-    `${school.legalName}`,
+    school.legalName,
     `${school.address.street}, ${school.address.city}, ${school.address.state} ${school.address.zip}`,
   ].join("\n");
 
   return {
-    subject: `Enrollment application received — ${input.studentName}`,
+    subject: tr("email.confirmation.subject", vars),
     html,
     text,
   };
@@ -214,4 +235,215 @@ export function inquiryNotificationEmail(input: {
     html,
     text,
   };
+}
+
+/* ========================================================================== */
+/*  FAMILY STATUS NOTIFICATIONS                                               */
+/* ========================================================================== */
+
+/**
+ * The three messages that tell a family their application moved.
+ *
+ * Before these existed, a family received exactly one email — the submission
+ * confirmation — and then heard nothing until someone phoned. The confirmation promises
+ * that "the Head of School will be in touch", so the silence was a promise the software
+ * left to a human to keep.
+ *
+ * WHAT IS DELIBERATELY ABSENT FROM ALL THREE
+ *
+ *  - Any record content. No date of birth, no medical detail, no assessment result, no
+ *    review notes. The rule in lib/email/send.ts applies here in full.
+ *  - Any authenticated link. Families have no login on this site — it is enrollment-only
+ *    (see the division of intent on `dailyApp` in lib/site.ts) — so there is nowhere to
+ *    send them. The welcome email links app.vaschool.org, which is the OTHER application.
+ *  - A decline message. There is no template for `declined` on purpose: that conversation
+ *    happens by phone, and the admin screen prompts staff to make the call.
+ *
+ * Each takes a `locale` and renders through the message catalogue, because a family that
+ * applied in Spanish should not be told they were accepted in English.
+ */
+
+const emailButton = (href: string, label: string) =>
+  `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 18px;">
+    <tr><td style="background:${NAVY};border-radius:8px;">
+      <a href="${esc(href)}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${esc(label)}</a>
+    </td></tr>
+  </table>`;
+
+const eyebrow = (text: string) =>
+  `<p style="margin:22px 0 10px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${GOLD};">${esc(text)}</p>`;
+
+/**
+ * The closing "questions?" line, with the phone number as a tel: link.
+ *
+ * Escaping happens BEFORE the anchor is substituted, so the translated sentence is
+ * escaped as text while the markup is inserted afterwards. A sentinel is used rather than
+ * matching the phone number itself: matching a value that also appears elsewhere in the
+ * sentence would replace the wrong occurrence, and matching post-escape text is exactly
+ * the kind of thing that breaks silently in one language only.
+ */
+function questionsParagraph(tr: (key: MessageKey, vars?: Record<string, string | number>) => string): string {
+  const SENTINEL = "{{PHONE}}";
+  const sentence = tr("email.questions.calls", { phone: SENTINEL });
+  const anchor = `<a href="tel:${esc(school.phone.replace(/\D/g, ""))}" style="color:${NAVY};">${esc(school.phone)}</a>`;
+  return p(esc(sentence).replace(SENTINEL, anchor));
+}
+
+/** Sent when an application reaches `intakeScheduled`. */
+export function intakeScheduledEmail(input: {
+  guardianName: string;
+  studentName: string;
+  locale?: Locale;
+}): { subject: string; html: string; text: string } {
+  const locale = input.locale ?? "en";
+  const tr = translator(locale);
+  const vars = { guardianName: input.guardianName, studentName: input.studentName };
+
+  const bring = [
+    tr("email.intake.bring1"),
+    tr("email.intake.bring2"),
+    tr("email.intake.bring3"),
+  ];
+
+  const html = layout(
+    tr("email.intake.heading"),
+    [
+      p(esc(tr("email.intake.body1", vars))),
+      p(esc(tr("email.intake.body2"))),
+      eyebrow(tr("email.intake.bringHeading")),
+      `<ul style="margin:0 0 18px;padding-left:20px;">${bring
+        .map(
+          (item) =>
+            `<li style="margin:0 0 8px;font-size:15px;line-height:1.6;color:${INK};">${esc(item)}</li>`,
+        )
+        .join("")}</ul>`,
+      questionsParagraph(tr),
+    ].join(""),
+    locale,
+  );
+
+  const text = [
+    tr("email.intake.heading"),
+    ``,
+    tr("email.intake.body1", vars),
+    ``,
+    tr("email.intake.body2"),
+    ``,
+    tr("email.intake.bringHeading").toUpperCase(),
+    ...bring.map((item) => `- ${item}`),
+    ``,
+    tr("email.questions.calls", { phone: school.phone }),
+    ``,
+    school.legalName,
+    `${school.address.street}, ${school.address.city}, ${school.address.state} ${school.address.zip}`,
+  ].join("\n");
+
+  return { subject: tr("email.intake.subject", vars), html, text };
+}
+
+/** Sent when an application reaches `accepted`. */
+export function applicationAcceptedEmail(input: {
+  guardianName: string;
+  studentName: string;
+  locale?: Locale;
+}): { subject: string; html: string; text: string } {
+  const locale = input.locale ?? "en";
+  const tr = translator(locale);
+  const vars = {
+    guardianName: input.guardianName,
+    studentName: input.studentName,
+    schoolName: school.dbaName,
+    monthlyContribution: tuition.monthlyContribution,
+  };
+
+  const html = layout(
+    tr("email.accepted.heading", vars),
+    [
+      p(esc(tr("email.accepted.body1", vars))),
+      p(esc(tr("email.accepted.body2", vars))),
+      p(esc(tr("email.accepted.body3"))),
+      questionsParagraph(tr),
+    ].join(""),
+    locale,
+  );
+
+  const text = [
+    tr("email.accepted.heading", vars),
+    ``,
+    tr("email.accepted.body1", vars),
+    ``,
+    tr("email.accepted.body2", vars),
+    ``,
+    tr("email.accepted.body3"),
+    ``,
+    tr("email.questions.calls", { phone: school.phone }),
+    ``,
+    school.legalName,
+  ].join("\n");
+
+  return { subject: tr("email.accepted.subject", vars), html, text };
+}
+
+/**
+ * Sent when the Office 365 mailbox is ACTIVATED — not at promotion.
+ *
+ * This is the only message that carries account details, and the reason it waits is
+ * simple: at promotion the address exists in our records but the mailbox does not, so
+ * naming it then hands a family something that bounces.
+ */
+export function enrollmentWelcomeEmail(input: {
+  guardianName: string;
+  studentName: string;
+  schoolEmail: string;
+  locale?: Locale;
+}): { subject: string; html: string; text: string } {
+  const locale = input.locale ?? "en";
+  const tr = translator(locale);
+  const vars = {
+    guardianName: input.guardianName,
+    studentName: input.studentName,
+    schoolName: school.dbaName,
+  };
+
+  const html = layout(
+    tr("email.welcome.heading", vars),
+    [
+      p(esc(tr("email.welcome.body1", vars))),
+      eyebrow(tr("email.welcome.accountHeading")),
+      `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 10px;font-size:15px;color:${INK};">
+        <tr>
+          <td style="padding:4px 12px 4px 0;color:${MUTED};">${esc(tr("email.welcome.accountEmail"))}</td>
+          <td style="padding:4px 0;"><strong style="color:${NAVY};">${esc(input.schoolEmail)}</strong></td>
+        </tr>
+      </table>`,
+      `<p style="margin:0 0 18px;font-size:13px;line-height:1.6;color:${MUTED};">${esc(tr("email.welcome.accountNote"))}</p>`,
+      eyebrow(tr("email.welcome.appHeading")),
+      p(esc(tr("email.welcome.appBody"))),
+      emailButton(dailyApp.loginUrl, tr("email.welcome.appButton")),
+      p(esc(tr("email.welcome.body2"))),
+      questionsParagraph(tr),
+    ].join(""),
+    locale,
+  );
+
+  const text = [
+    tr("email.welcome.heading", vars),
+    ``,
+    tr("email.welcome.body1", vars),
+    ``,
+    `${tr("email.welcome.accountEmail")}: ${input.schoolEmail}`,
+    tr("email.welcome.accountNote"),
+    ``,
+    tr("email.welcome.appHeading").toUpperCase(),
+    tr("email.welcome.appBody"),
+    dailyApp.loginUrl,
+    ``,
+    tr("email.welcome.body2"),
+    ``,
+    tr("email.questions.calls", { phone: school.phone }),
+    ``,
+    school.legalName,
+  ].join("\n");
+
+  return { subject: tr("email.welcome.subject", vars), html, text };
 }

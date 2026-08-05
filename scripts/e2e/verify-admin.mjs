@@ -251,7 +251,13 @@ function idNear(body, name, prefix) {
   const submitted = await postForm(fam, "/enroll/sign",
     findForm(signPage.body, 'name="typedName"'),
     { typedName: "Alpha Guardian", intentAffirmed: "true" });
-  check("Fixture application submitted", submitted.status === 303, `status=${submitted.status}`);
+  check(
+    "Fixture application submitted",
+    submitted.status === 303,
+    submitted.status === 303
+      ? ""
+      : `status=${submitted.status} — ${serverError(submitted.body)}`,
+  );
 }
 
 // ---------- Admin login ----------

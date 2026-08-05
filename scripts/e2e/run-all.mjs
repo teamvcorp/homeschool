@@ -26,6 +26,7 @@ const HARNESSES = [
   ["verify-admin.mjs", "admin review flow and every authorization boundary"],
   ["verify-promote.mjs", "the promote trap, school ID, and school email"],
   ["verify-agreement.mjs", "the printable executed agreement"],
+  ["verify-notifications.mjs", "family status emails, and the two that must NOT send"],
 ];
 
 function run(file) {
