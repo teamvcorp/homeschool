@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { navigation, type NavItem } from "@/lib/site";
+import { navigation, dailyApp, type NavItem } from "@/lib/site";
 import { WordmarkLink } from "./ui/Crest";
 import { ButtonLink } from "./ui/Button";
 
@@ -169,7 +169,24 @@ export default function SiteHeader() {
               ),
             )}
 
-            <ButtonLink href="/enroll" variant="gold" size="sm" className="ml-3">
+            {/*
+              Persistent sign-in for enrolled families.
+              Deliberately a quiet text link next to the gold Enroll button, not a second
+              button: a prospective family's action is Enroll, and two equally-weighted CTAs
+              would make neither obvious. But an enrolled parent checking a child in visits
+              daily and may be on any page, so putting this only on the home page would
+              force them back there first.
+            */}
+            <a
+              href={dailyApp.loginUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-navy-900"
+            >
+              Sign in
+            </a>
+
+            <ButtonLink href="/enroll" variant="gold" size="sm" className="ml-1">
               Enroll
             </ButtonLink>
           </div>
@@ -285,6 +302,16 @@ export default function SiteHeader() {
           >
             Enroll
           </ButtonLink>
+
+          {/* Same two-audience split as the desktop nav, stacked for mobile. */}
+          <a
+            href={dailyApp.loginUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 block rounded-full border border-navy-200 px-5 py-2.5 text-center text-sm font-semibold text-navy-800"
+          >
+            Already enrolled? Sign in
+          </a>
         </div>
       ) : null}
     </header>

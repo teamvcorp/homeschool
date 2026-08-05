@@ -57,6 +57,35 @@ export const school = {
 /** Full one-line address, e.g. for JSON-LD and footers. */
 export const addressLine = `${school.address.street}, ${school.address.city}, ${school.address.state} ${school.address.zip}`;
 
+/**
+ * THE SCHOOL DAY APP — a SEPARATE application at app.vaschool.org.
+ *
+ * This is where already-enrolled students and parents sign in for the school day and daily
+ * check-in. It is NOT this site, NOT part of enrollment, and shares no routes with us — a
+ * different Vercel deployment with its own login.
+ *
+ * ⚠️  KEEPING THE TWO STRAIGHT IS THE WHOLE POINT OF THE LINK COPY.
+ *
+ * This site has its own `/login` and `/portal`, which serve a different purpose: the
+ * permanent record — attendance history, mastery log, behavioral progress, Taekwondo rank,
+ * and the family's signed enrollment agreement. Two sign-ins for two jobs is genuinely
+ * confusing, so anywhere either is linked the copy must say which is which:
+ *
+ *   app.vaschool.org  → today: check in, the school day
+ *   /portal (here)    → the record: history, progress, the signed agreement
+ *
+ * A prospective family must never be sent here — they have no account, and a login wall is
+ * the worst possible answer to "I want to enroll my child".
+ */
+export const dailyApp = {
+  url: "https://app.vaschool.org",
+  loginUrl: "https://app.vaschool.org/login",
+  name: "School Day app",
+  /** One line, used wherever the link appears. */
+  purpose: "Daily check-in and the school day",
+  audience: "Already-enrolled students and parents",
+} as const;
+
 /** Years in continuous operation, computed so it never goes stale. */
 export function yearsInOperation(now: Date = new Date()): number {
   return now.getFullYear() - school.established;

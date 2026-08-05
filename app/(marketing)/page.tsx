@@ -1,4 +1,5 @@
 import Hero from "@/app/components/home/Hero";
+import CurrentFamilies from "@/app/components/home/CurrentFamilies";
 import MasteryModel from "@/app/components/home/MasteryModel";
 import Philosophy from "@/app/components/home/Philosophy";
 import CharacterPillars from "@/app/components/home/CharacterPillars";
@@ -26,6 +27,9 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      {/* Directly below the hero on purpose: an enrolled parent checking a child in is a
+          daily visitor and should not have to scroll past the prospective-family pitch. */}
+      <CurrentFamilies />
       <MasteryModel />
       <Philosophy />
       <CharacterPillars />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { school, addressLine, footerNav, yearsInOperation } from "@/lib/site";
+import { school, addressLine, footerNav, yearsInOperation, dailyApp } from "@/lib/site";
 import { Wordmark } from "./ui/Crest";
 import { ButtonLink, ArrowIcon } from "./ui/Button";
 
@@ -107,6 +107,46 @@ export default function SiteFooter() {
               </Link>
               .
             </p>
+
+            {/*
+              Sign-in links, grouped and LABELLED BY WHAT THEY DO.
+              The school runs two separate sign-ins plus a staff area, and an unlabelled list
+              of three would be worse than none. See the note on `dailyApp` in lib/site.ts.
+            */}
+            <h2 className="mt-8 text-xs font-bold uppercase tracking-[0.15em] text-gold-300">
+              Already enrolled
+            </h2>
+            <ul className="mt-4 list-none space-y-3">
+              <li>
+                <a
+                  href={dailyApp.loginUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-navy-200 transition-colors hover:text-white"
+                >
+                  School Day app &mdash; check in
+                </a>
+                <span className="mt-0.5 block text-xs text-navy-500">
+                  Today&rsquo;s attendance and the school day
+                </span>
+              </li>
+              {/*
+                ⚠️  NO "Family portal" LINK HERE YET — deliberately.
+                /portal is built and works, but nothing in the system can CREATE a parent
+                account: there is no admin users screen, and scripts/seed-admin.ts only makes
+                administrators. Linking families to a login they cannot pass would generate
+                support calls and erode trust in the rest of the site. Add this link in the
+                same commit that ships parent-account creation.
+              */}
+              <li>
+                <Link
+                  href="/admin"
+                  className="text-sm text-navy-400 transition-colors hover:text-navy-200"
+                >
+                  Staff &amp; instructor sign-in
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
