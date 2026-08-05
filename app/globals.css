@@ -124,6 +124,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* --------------------------------------------------------------------------
+   LAO SCRIPT
+
+   Geist and Source Serif 4 are loaded with `subsets: ["latin"]` only and have
+   NO Lao glyphs, so Lao text in them renders as tofu — a row of empty boxes.
+   Noto Sans Lao (loaded in app/layout.tsx) supplies them.
+
+   Driven by the `lang` attribute rather than a utility class, so ANY element
+   marked as Lao is covered automatically — including the language toggle's own
+   Lao button, which must be legible BEFORE a visitor has switched. Applies to
+   headings too, which is why it also overrides the serif rule below: there is
+   no Lao serif loaded, and a missing glyph is worse than a missing style.
+
+   The `lang` attribute is doing double duty here, and both jobs matter: Lao
+   does not put spaces between words, so it is also what lets the browser break
+   lines in sensible places.
+   -------------------------------------------------------------------------- */
+[lang="lo"],
+[lang="lo"] h1,
+[lang="lo"] h2,
+[lang="lo"] h3,
+[lang="lo"] h4 {
+  font-family: var(--font-lao), var(--font-sans);
+}
+
 /* Headings default to the serif display face. */
 h1,
 h2,

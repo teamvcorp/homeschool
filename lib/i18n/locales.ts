@@ -35,7 +35,13 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "en";
 
-/** Cookie holding the visitor's choice. Not httpOnly — it is a preference, not a secret. */
+/**
+ * Cookie holding the visitor's choice.
+ *
+ * Written httpOnly (see lib/actions/language.ts): nothing client-side reads it, and a
+ * cookie no script can touch is one fewer thing an XSS foothold can rewrite. Its VALUE is
+ * still untrusted input — anyone can send any cookie — hence `coerceLocale` below.
+ */
 export const LOCALE_COOKIE = "va_lang";
 
 /**

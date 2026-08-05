@@ -48,6 +48,9 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | `scripts/e2e/verify-admin.mjs` | Application review, the status machine, countersignature, promotion, all four record templates, and every authorization boundary including cross-family scope. |
 | `scripts/e2e/verify-promote.mjs` | The promote trap, school ID assignment, school email generation and mailbox status. |
 | `scripts/e2e/verify-agreement.mjs` | The printable executed agreement renders with its evidence envelope and refuses unauthorized readers. |
+| `scripts/e2e/verify-notifications.mjs` | Family status emails — and the two milestones that must NOT send. Inspects the email queue for template ids and stored locales. |
+| `scripts/e2e/verify-language.mjs` | The language toggle driven with no JavaScript, plus the `returnTo` redirect guard. |
+| `scripts/check-agreement-hash.ts` | Pins the agreement's SHA-256 so no change to the signed wording can pass unnoticed. |
 
 ## The database rule
 
@@ -143,6 +146,38 @@ is first on the page. Omitting `$ACTION_KEY` produces a 500 with a suspiciously 
 
 `findForm()` in each harness captures all four. Reuse it rather than reinventing it.
 
+**There are TWO wire formats, and knowing only one costs an afternoon.** The four fields
+above are what a BOUND action emits (`saveEnrollmentStep.bind(null, slug)`). An action
+passed directly — `action={setLanguageAction}` — emits something else entirely:
+
+```
+$ACTION_ID_<hash>     one hidden input, EMPTY value; the NAME is the identifier
+```
+
+Searching for `$ACTION_REF_` on a page whose form uses the direct shape finds nothing, and
+the failure reads exactly like "the component did not render".
+
+**Never hardcode the action index, and never rebuild the id field.** `verify-enroll.mjs`
+did both: it looked for `$ACTION_1:0` and reconstructed it as
+`JSON.stringify({ id, bound: "$@1" })`. Adding the language toggle to `/enroll` shifted the
+wizard form to `$ACTION_2` and every step broke at once. Discover the index from
+`$ACTION_REF_(\d+)`, echo the values verbatim, and skip forms belonging to other actions
+(the toggle is identifiable by its `returnTo` field).
+
+## Trap 7 — "does not leave the site" is not the same as "is safe"
+
+`verify-language.mjs` asserted that a crafted `returnTo` did not redirect off-site. It
+passed for `/enroll/../admin` — which never leaves the origin, and which a browser
+**normalises to `/admin`**, defeating the funnel-scoped allowlist entirely.
+
+The assertion was too weak, so it certified the bug. A redirect target is safe here only
+if it is same-origin, under `/enroll`, and contains no traversal left for the browser to
+resolve — including percent-encoded (`%2e%2e`) forms. Both the guard in
+`lib/actions/language.ts` and the assertion now check all of that.
+
+The general lesson: when testing a guard, assert the property you actually want, not the
+absence of the most obvious violation.
+
 ## Trap 6 — the suite exhausts its own rate limits
 
 The public enrollment submit is capped **per IP per hour** and **per guardian email per
@@ -194,12 +229,22 @@ Last full run — all five harnesses green in a single `npm run e2e`, **134 chec
 | Suite | Result |
 |---|---|
 | `check:email` | 17 / 17 |
+| `check:agreement` | pinned at `2308d0e0…` |
 | `verify-enroll` | 20 / 20 |
 | `verify-bugfix` | 28 / 28 |
 | `verify-admin` | 45 / 45 |
 | `verify-promote` | 24 / 24 |
 | `verify-agreement` | 17 / 17 |
-| typecheck · lint · build | clean (34 routes, 45 prerendered pages) |
+| `verify-notifications` | 24 / 24 |
+| `verify-language` | 26 / 26 |
+| typecheck · lint · build | clean; the 18 static marketing pages remain `○` |
+
+**184 checks across 7 harnesses**, green from an emptied database.
+
+The build's `○` / `ƒ` column is a real assertion, not decoration: the language cookie is
+read in `app/(marketing)/enroll/layout.tsx` rather than the root layout precisely so the
+marketing pages stay static. If they ever appear as `ƒ`, a cookie is being read too high in
+the tree.
 
 ## What is NOT covered
 

@@ -14,6 +14,8 @@ import { saveEnrollmentStep } from "@/lib/actions/enrollment";
 import { PageHeader } from "@/app/components/ui/PageHeader";
 import { Section } from "@/app/components/ui/Section";
 import { StepIndicator } from "@/app/components/forms/StepIndicator";
+import LanguageToggle from "@/app/components/forms/LanguageToggle";
+import { getLocale } from "@/lib/i18n/server";
 import StepForm from "./step-form";
 import ReviewPanel from "./review-panel";
 import SignPanel from "./sign-panel";
@@ -44,6 +46,8 @@ export default async function EnrollStepPage({
   const { step: slug } = await params;
   const step = getStep(slug);
   if (!step) notFound();
+
+  const locale = await getLocale();
 
   const draft = await loadActiveDraft();
 
@@ -125,6 +129,12 @@ export default async function EnrollStepPage({
 
   return (
     <>
+      <div className="border-b border-line bg-surface-muted">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 lg:px-8">
+          <LanguageToggle locale={locale} path={`/enroll/${slug}`} />
+        </div>
+      </div>
+
       <PageHeader
         eyebrow="Family enrollment agreement"
         title={step.title}

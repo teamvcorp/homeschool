@@ -8,6 +8,8 @@ import { ProcessSteps } from "@/app/components/ui/ProcessSteps";
 import { Callout } from "@/app/components/ui/Callout";
 import { ExternalButtonLink } from "@/app/components/ui/Button";
 import { SubmitButton } from "@/app/components/forms/SubmitButton";
+import LanguageToggle from "@/app/components/forms/LanguageToggle";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Application received",
@@ -39,9 +41,21 @@ export default async function EnrollmentSubmittedPage({
   searchParams,
 }: PageProps<"/enroll/submitted">) {
   const { busy } = await searchParams;
+  const locale = await getLocale();
 
   return (
     <>
+      {/*
+        The toggle stays available here because this page carries the "enroll another
+        child" button — a family adding a sibling continues in the same language, and one
+        that switched late should not be dropped back to English for the next child.
+      */}
+      <div className="border-b border-line bg-surface-muted">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 lg:px-8">
+          <LanguageToggle locale={locale} path="/enroll/submitted" />
+        </div>
+      </div>
+
       <PageHeader
         eyebrow="Thank you"
         title="Your application is in"

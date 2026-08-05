@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Source_Serif_4 } from "next/font/google";
+import { Geist, Source_Serif_4, Noto_Sans_Lao } from "next/font/google";
 import { school, mission } from "@/lib/site";
 import "./globals.css";
 
@@ -22,6 +22,30 @@ const sourceSerif = Source_Serif_4({
   variable: "--font-source-serif",
   subsets: ["latin"],
   display: "swap",
+});
+
+/**
+ * LAO SCRIPT SUPPORT — NOT OPTIONAL, NOT COSMETIC.
+ *
+ * Geist and Source Serif 4 are both loaded with `subsets: ["latin"]` and contain NO Lao
+ * glyphs. Without a Lao-capable face, every Lao string renders as tofu — a row of empty
+ * boxes — which is a worse experience than plain English and looks like a broken site
+ * rather than a translated one.
+ *
+ * Applied by attribute selector in globals.css (`[lang="lo"]`) rather than by adding a
+ * class at each call site, so ANY element marked as Lao picks it up automatically,
+ * including the language toggle's own button before the visitor has switched.
+ *
+ * Loaded site-wide rather than lazily per locale: `next/font` self-hosts and subsets at
+ * build time, and conditionally loading a font per request is not something next/font
+ * supports. Latin-reading visitors never download it, because nothing on their page
+ * matches the selector that references it.
+ */
+const notoSansLao = Noto_Sans_Lao({
+  variable: "--font-lao",
+  subsets: ["lao"],
+  display: "swap",
+  weight: ["400", "600", "700"],
 });
 
 /**
@@ -137,7 +161,7 @@ export default function RootLayout({
        * scrolling smoothly.
        */
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${sourceSerif.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${sourceSerif.variable} ${notoSansLao.variable} h-full antialiased`}
     >
       <body suppressHydrationWarning className="flex min-h-full flex-col">
         {/* Keyboard users get past the nav without tabbing through every link. */}

@@ -48,36 +48,59 @@ async function get(path) {
   return { status: res.status, location: res.headers.get("location"), body };
 }
 
-/** Extracts the server action id from a rendered form. */
-function actionId(html) {
-  const m = html.match(/name="\$ACTION_1:0" value="([^"]+)"/);
-  if (!m) return null;
-  return JSON.parse(m[1].replace(/&quot;/g, '"')).id;
-}
-
 /** Extracts the signed anti-abuse timestamp the page issued. */
 function formTimestamp(html) {
   const m = html.match(/name="form_issued"[^>]*value="([^"]+)"/);
   return m ? m[1] : null;
 }
 
-/** Extracts the bound previous-state argument. */
-function boundState(html) {
-  const m = html.match(/name="\$ACTION_1:1" value="([^"]+)"/);
-  return m ? m[1].replace(/&quot;/g, '"') : '[{"ok":false}]';
+/**
+ * Locates the wizard's own form and captures its action fields VERBATIM.
+ *
+ * THIS REPLACED TWO PIECES OF FRAGILITY THAT BOTH BIT:
+ *
+ * 1. The action index was HARDCODED to 1. Adding the language toggle to /enroll shifted
+ *    the wizard form to `$ACTION_2`, and every step began failing with "no action id
+ *    found" — which reads like the page stopped rendering rather than like the harness
+ *    guessed an index. The index is now discovered.
+ *
+ * 2. The action id field was REBUILT as JSON.stringify({ id, bound: "$@1" }) rather than
+ *    echoed. That only works while the form happens to be the first action on the page,
+ *    which is precisely the assumption that just broke. React's bound reference is now
+ *    passed through untouched, as findForm() does in every other harness.
+ *
+ * Forms carrying `returnTo` are skipped: that is the language toggle, which is a DIRECT
+ * action reference using the `$ACTION_ID_<hash>` shape and is not what these steps submit.
+ */
+function findWizardForm(html) {
+  for (const f of html.match(/<form[\s\S]*?<\/form>/g) ?? []) {
+    if (f.includes('name="returnTo"')) continue; // the language toggle
+    const nM = f.match(/name="[$]ACTION_REF_(\d+)"/);
+    if (!nM) continue;
+    const n = nM[1];
+    const id = f.match(new RegExp(`name="[$]ACTION_${n}:0" value="([^"]+)"`));
+    if (!id) continue;
+    const st = f.match(new RegExp(`name="[$]ACTION_${n}:1" value="([^"]+)"`));
+    const key = f.match(/name="[$]ACTION_KEY" value="([^"]*)"/);
+    return {
+      n,
+      idField: id[1].replace(/&quot;/g, '"'),
+      bound: st ? st[1].replace(/&quot;/g, '"') : '[{"ok":false}]',
+      key: key ? key[1] : null,
+    };
+  }
+  return null;
 }
 
 async function postAction(path, html, fields) {
-  const id = actionId(html);
-  if (!id) throw new Error(`no action id found on ${path}`);
+  const form = findWizardForm(html);
+  if (!form) throw new Error(`no action id found on ${path}`);
 
   const fd = new FormData();
-  fd.set("$ACTION_REF_1", "");
-  fd.set("$ACTION_1:0", JSON.stringify({ id, bound: "$@1" }));
-  fd.set("$ACTION_1:1", boundState(html));
-
-  const key = html.match(/name="[$]ACTION_KEY" value="([^"]*)"/);
-  if (key) fd.set("$ACTION_KEY", key[1]);
+  fd.set(`$ACTION_REF_${form.n}`, "");
+  fd.set(`$ACTION_${form.n}:0`, form.idField);
+  fd.set(`$ACTION_${form.n}:1`, form.bound);
+  if (form.key) fd.set("$ACTION_KEY", form.key);
 
   const ts = formTimestamp(html);
   if (ts) fd.set("form_issued", ts);

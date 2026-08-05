@@ -8,6 +8,8 @@ import { ProcessSteps } from "@/app/components/ui/ProcessSteps";
 import { Callout } from "@/app/components/ui/Callout";
 import { ExternalButtonLink } from "@/app/components/ui/Button";
 import { SubmitButton } from "@/app/components/forms/SubmitButton";
+import LanguageToggle from "@/app/components/forms/LanguageToggle";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Enroll",
@@ -34,6 +36,7 @@ export const metadata: Metadata = {
  */
 export default async function EnrollPage({ searchParams }: PageProps<"/enroll">) {
   const { busy } = await searchParams;
+  const locale = await getLocale();
 
   return (
     <>
@@ -42,6 +45,22 @@ export default async function EnrollPage({ searchParams }: PageProps<"/enroll">)
         title="Begin enrollment"
         lead="One agreement per student. About fifteen minutes, and your progress saves as you go."
       />
+
+      {/*
+        Language choice offered BEFORE the family commits to anything. Placed at the top of
+        the first page of the funnel on purpose: discovering the switch on step four, having
+        already struggled through three steps, is worse than not offering it.
+      */}
+      {/*
+        A plain container rather than <Section>: Section bakes in py-16/sm:py-24, and
+        appending a smaller py-* through className would not reliably win — class order in
+        the attribute does not decide CSS specificity, source order in the stylesheet does.
+      */}
+      <div className="border-b border-line bg-surface-muted">
+        <div className="mx-auto max-w-3xl px-4 py-4 sm:px-6 lg:px-8">
+          <LanguageToggle locale={locale} path="/enroll" />
+        </div>
+      </div>
 
       <Section>
         <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">

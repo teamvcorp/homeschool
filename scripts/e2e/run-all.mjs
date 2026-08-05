@@ -27,6 +27,7 @@ const HARNESSES = [
   ["verify-promote.mjs", "the promote trap, school ID, and school email"],
   ["verify-agreement.mjs", "the printable executed agreement"],
   ["verify-notifications.mjs", "family status emails, and the two that must NOT send"],
+  ["verify-language.mjs", "the language toggle with no JavaScript, and its redirect guard"],
 ];
 
 function run(file) {
