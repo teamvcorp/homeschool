@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/dal";
 import { can } from "@/lib/auth/roles";
@@ -8,6 +9,7 @@ import {
   inquiriesCollection,
 } from "@/lib/db/collections";
 import SecureHeader from "@/app/components/secure/SecureHeader";
+import { ADMIN_NAV } from "@/app/components/secure/nav";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -20,14 +22,10 @@ export const metadata: Metadata = {
  * The auth check is HERE, in the page — not in the layout. See the comment in
  * app/(secure)/layout.tsx for why that distinction matters.
  *
- * Phase 5 builds out the records screens (attendance, mastery, behavior,
- * Taekwondo, applications, instructors, partnerships). This is the shell plus the
- * live counts, so the authentication path is genuinely exercised end to end.
+ * Counts are live from the database. No student detail is loaded here, so rendering the
+ * dashboard reads no medical or behavioral data and writes no per-student audit entries
+ * — a page that reveals nothing about any individual should not look like it did.
  */
-const ADMIN_NAV = [
-  { label: "Overview", href: "/admin" },
-] as const;
-
 export default async function AdminDashboardPage() {
   const user = await requireUser();
 
@@ -103,23 +101,50 @@ export default async function AdminDashboardPage() {
           ))}
         </dl>
 
-        <div className="mt-10 rounded-2xl border border-line border-l-4 border-l-gold-400 bg-white p-6">
-          <h2 className="font-serif text-lg font-bold text-navy-900">
-            Records screens are being built
-          </h2>
-          <p className="mt-2 leading-relaxed text-ink-muted">
-            The database, authentication, and audit logging are in place. The
-            attendance grid, mastery log, behavioral records, Taekwondo
-            progression, application review, instructor log, and employer
-            partnership screens land next.
-          </p>
-          {canSeeFinancials ? (
-            <p className="mt-3 text-sm text-ink-subtle">
-              You are signed in as an administrator, so you will see tuition and
-              ESA status alongside those records.
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          <Link
+            href="/admin/applications"
+            className="rounded-2xl border border-line border-l-4 border-l-gold-400 bg-white p-6 transition-shadow hover:shadow-lg"
+          >
+            <h2 className="font-serif text-lg font-bold text-navy-900">
+              Review applications
+            </h2>
+            <p className="mt-2 leading-relaxed text-ink-muted">
+              Read signed agreements, advance intake status, countersign, and promote
+              accepted families into student records.
             </p>
-          ) : null}
+            {newApplications > 0 ? (
+              <p className="mt-3 text-sm font-semibold text-gold-700">
+                {newApplications} awaiting first review
+              </p>
+            ) : null}
+          </Link>
+
+          <Link
+            href="/admin/students"
+            className="rounded-2xl border border-line border-l-4 border-l-crest-blue-600 bg-white p-6 transition-shadow hover:shadow-lg"
+          >
+            <h2 className="font-serif text-lg font-bold text-navy-900">
+              Student records
+            </h2>
+            <p className="mt-2 leading-relaxed text-ink-muted">
+              Attendance, mastery log, pivotal behavior, and Taekwondo progression —
+              Templates A through D from the accreditation package.
+            </p>
+          </Link>
         </div>
+
+        {canSeeFinancials ? (
+          <p className="mt-6 text-sm leading-relaxed text-ink-subtle">
+            Signed in as an administrator: you can see medical detail, ESA elections, and
+            signature records. Every record you open is written to the audit log.
+          </p>
+        ) : (
+          <p className="mt-6 text-sm leading-relaxed text-ink-subtle">
+            Signed in as an instructor: you can record progress for students assigned to
+            you. Financial detail and account management are not available to your role.
+          </p>
+        )}
       </main>
     </>
   );

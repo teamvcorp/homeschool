@@ -102,7 +102,24 @@ export function hashIdentifier(value: string): string {
 export const RATE_LIMITS = {
   LOGIN_PER_EMAIL: { limit: 5, windowSeconds: 15 * 60 },
   LOGIN_PER_IP: { limit: 20, windowSeconds: 15 * 60 },
-  ENROLL_PER_IP: { limit: 5, windowSeconds: 60 * 60 },
-  ENROLL_PER_EMAIL: { limit: 3, windowSeconds: 24 * 60 * 60 },
+
+  /**
+   * Saving one wizard step. Deliberately generous.
+   *
+   * An earlier version reused the strict submit policy here, which end-to-end testing
+   * caught: a real family completes six steps, revisits some to fix typos, and may
+   * enrol siblings — comfortably more than a handful of saves. Locking them out
+   * mid-agreement is a far worse outcome than tolerating a bot that pointlessly saves
+   * drafts, since a draft is disposable and TTL-expired.
+   *
+   * The expensive, irreversible operation is the SUBMIT, and that is what
+   * ENROLL_SUBMIT_* below guards.
+   */
+  ENROLL_STEP_PER_IP: { limit: 120, windowSeconds: 60 * 60 },
+
+  /** Final submission — one real application per family per sitting. */
+  ENROLL_SUBMIT_PER_IP: { limit: 6, windowSeconds: 60 * 60 },
+  ENROLL_SUBMIT_PER_EMAIL: { limit: 4, windowSeconds: 24 * 60 * 60 },
+
   INQUIRY_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
 } as const;

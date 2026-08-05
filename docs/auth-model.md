@@ -158,3 +158,44 @@ reading those under `isolatedModules` (which Next enables).
 - [ ] Content-Security-Policy (see `docs/security-checklist.md`)
 - [ ] Password change / reset flow
 - [ ] Admin UI for creating instructor and parent accounts
+
+## Verification results
+
+Two automated end-to-end suites drive the real server actions over the
+no-JavaScript path. **64 checks, all passing.**
+
+### Enrollment funnel (20/20)
+
+Wizard walk, plus: 7-of-8 acknowledgments rejected · honeypot rejected · sub-2-second
+submission rejected · signature without intent affirmation rejected · draft cookie
+cleared after submit · confirmation page contains no student name · deep-link without a
+draft redirects.
+
+### Admin & authorization boundaries (44/44)
+
+Anonymous access to `/admin`, `/admin/applications`, `/admin/students`, `/portal` all
+redirect · full status machine walk · **illegal status transition refused** ·
+countersign form removed after signing (no overwrite) · **promote form gone after
+promotion (no double-create)** · all four record templates write and display ·
+out-of-range behavior level refused · nonexistent student id 404s.
+
+Scope isolation, the checks that matter most:
+
+- **A parent CANNOT read an unlinked student** → 404
+- **A parent CANNOT read an unlinked agreement** → 404
+- A parent cannot reach the admin student view → 307
+- A parent is redirected away from the applications inbox → 307
+
+### Two real bugs these suites caught
+
+1. **Rate limiting scoped wrongly.** Step saves shared the strict submit policy (5/hour),
+   so a family completing six steps was locked out mid-agreement. Split into
+   `ENROLL_STEP_PER_IP` (120/hour) and `ENROLL_SUBMIT_PER_IP` (6/hour) — the expensive,
+   irreversible operation is the submit, and that is what deserves the tight limit.
+2. **Drafts stored post-transform values.** Date fields are `z.string().transform(→ Date)`,
+   so storing `parsed.data` put `Date` objects in the draft; the final whole-agreement
+   re-validation then failed with "expected string, received Date" *after* the family had
+   filled everything in. Drafts now hold raw input; applications hold validated output.
+
+Both were invisible to typecheck, lint, and build. They only surfaced by driving the
+actual flow.

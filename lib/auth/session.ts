@@ -24,7 +24,19 @@ const ALGORITHM = "HS256";
 /** Eight hours: long enough for a school day, short enough to limit exposure. */
 const SESSION_DURATION_SECONDS = 60 * 60 * 8;
 
-const secretKey = new TextEncoder().encode(env.SESSION_SECRET);
+/**
+ * The HMAC signing key, derived on first use and cached.
+ *
+ * Lazy, and deliberately so: computing it at module scope would read SESSION_SECRET
+ * whenever anything imported this file, including `next build` collecting page data
+ * for /admin — which fails a deployment when secrets are runtime-only configuration.
+ */
+let secretKeyCache: Uint8Array | null = null;
+
+function getSecretKey(): Uint8Array {
+  secretKeyCache ??= new TextEncoder().encode(env.SESSION_SECRET);
+  return secretKeyCache;
+}
 
 export interface SessionPayload extends JWTPayload {
   userId: string;
@@ -46,7 +58,7 @@ export async function signSession(
     .setExpirationTime(now + SESSION_DURATION_SECONDS)
     .setIssuer("va-school")
     .setAudience("va-school")
-    .sign(secretKey);
+    .sign(getSecretKey());
 }
 
 /**
@@ -61,7 +73,7 @@ export async function verifySessionToken(
 ): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify<SessionPayload>(token, secretKey, {
+    const { payload } = await jwtVerify<SessionPayload>(token, getSecretKey(), {
       algorithms: [ALGORITHM],
       issuer: "va-school",
       audience: "va-school",

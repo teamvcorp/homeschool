@@ -122,3 +122,42 @@ tsx --env-file-if-exists=.env.local --conditions=react-server scripts/x.ts
   `react-server` export condition to its no-op `empty.js`.
 - `--env-file-if-exists` is needed because **`.env.local` loading is a Next
   feature** — standalone Node does not do it.
+
+## Server Actions over the no-JS path (learned the hard way while testing)
+
+To drive a server action without a browser — which is how you verify progressive
+enhancement actually works — a multipart POST must carry React's bookkeeping fields
+**exactly as rendered**:
+
+| Field | Notes |
+|---|---|
+| `$ACTION_REF_<n>` | empty value. `<n>` is per-form and is **not** always 1 |
+| `$ACTION_<n>:0` | the action reference. **Echo it verbatim** — do not rebuild it |
+| `$ACTION_<n>:1` | the bound previous state, e.g. `[{"ok":false}]` |
+| `$ACTION_KEY` | **required.** Omit it and the action silently does not run |
+
+Two failure modes cost real time:
+
+- **Rebuilding `$ACTION_<n>:0`** (constructing `{"id":…,"bound":"$@1"}` yourself) works by
+  luck when the form is first on the page and fails everywhere else. On a page with three
+  action forms the indices were 3 and 4.
+- **Omitting `$ACTION_KEY`** produces `⨯ Error: Connection closed.` and a 500 with
+  `application-code: 15ms` — i.e. the action body never executed. Nothing in the error
+  points at the missing field.
+
+A page with one form encodes differently from a page with several, and a form whose action
+takes no bound arguments uses `$ACTION_ID_<hash>` instead of the ref/key pair. Always read
+the rendered HTML rather than assuming.
+
+## Do not read env at module scope in anything a route imports
+
+`next build` walks the module graph of every route to collect page data. A module-scope
+`env.SECRET` read therefore executes **at build time**, and a build that requires runtime
+secrets fails on Vercel — where secrets are runtime configuration.
+
+This project's `lib/env.ts` validates lazily behind a Proxy for exactly this reason, and
+`lib/mongodb.ts` / `lib/auth/session.ts` read env *inside functions*. See the comments in
+those files before "simplifying" them back.
+
+The regression test is simple and worth keeping: **`npm run build` must succeed with
+`.env.local` absent.**

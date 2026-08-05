@@ -1,81 +1,82 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { school, admissionsSteps, tuition } from "@/lib/site";
+import { startEnrollmentAction } from "@/lib/actions/enrollment";
 import { PageHeader, Prose } from "@/app/components/ui/PageHeader";
 import { Section, SectionHeading } from "@/app/components/ui/Section";
 import { ProcessSteps } from "@/app/components/ui/ProcessSteps";
 import { Callout } from "@/app/components/ui/Callout";
-import { ExternalButtonLink, ArrowIcon } from "@/app/components/ui/Button";
+import { ExternalButtonLink } from "@/app/components/ui/Button";
+import { SubmitButton } from "@/app/components/forms/SubmitButton";
 
-/**
- * Enrollment entry point.
- *
- * INTERIM STATE: this page currently explains the process and routes families to
- * the Head of School directly. Phase 4 replaces the body of this route with the
- * multi-step Family Enrollment Agreement wizard (Document 9), backed by the
- * enrollmentDrafts collection and a signed httpOnly draft cookie.
- *
- * The "what you will need" list below is deliberately the field inventory of that
- * form, so it stays useful either way — and so families can gather medical and
- * guardian details before they start rather than abandoning the form to go find
- * a doctor's phone number.
- */
 export const metadata: Metadata = {
   title: "Enroll",
-  description: `Begin enrollment at The VA School. Four steps, ${tuition.monthlyContributionLabel}, with Iowa ESA funding accepted.`,
+  description: `Begin enrollment at The VA School. ${tuition.monthlyContributionLabel}, with Iowa ESA funding accepted.`,
 };
 
+/**
+ * Enrollment entry point — the start of the Family Enrollment Agreement (Document 9).
+ *
+ * The "Begin" control is a <form> posting a Server Action rather than a link, because
+ * starting an agreement has a side effect: it creates a draft record and sets a signed
+ * httpOnly cookie. A GET link cannot set a cookie, and making it one would mean a
+ * crawler or a prefetch could create draft records.
+ *
+ * The preparation checklist is deliberately the field inventory of the wizard. Someone
+ * who has to abandon the form to hunt for a doctor's phone number often does not come
+ * back.
+ */
 export default function EnrollPage() {
   return (
     <>
       <PageHeader
         eyebrow="Enrollment"
         title="Begin enrollment"
-        lead="One agreement per student. Plan on about fifteen minutes once you have the details below to hand."
+        lead="One agreement per student. About fifteen minutes, and your progress saves as you go."
       />
 
       <Section>
         <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">
           <div className="lg:col-span-3">
             <SectionHeading
-              eyebrow="Start here"
-              title="Contact the Head of School to open an application"
+              eyebrow="Ready when you are"
+              title="Start the Family Enrollment Agreement"
             />
+
             <Prose className="mt-6">
               <p>
-                The online enrollment agreement is being finalized. In the
-                meantime, enrollment opens the same way it always has &mdash; by
-                talking to <strong>{school.headOfSchool}</strong> directly. Email
-                or call, and you will get a real conversation rather than an
-                automated reply.
+                You will be asked about your student, your family&rsquo;s contact
+                details, how tuition will be funded, medical basics, and eight
+                program acknowledgments &mdash; then you will sign electronically.
+              </p>
+              <p>
+                Nothing is submitted until the final step, and you can go back and
+                change any answer before signing.
               </p>
             </Prose>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <ExternalButtonLink
-                href={`mailto:${school.email}?subject=Enrollment%20application`}
-                variant="gold"
-                size="lg"
-              >
-                Email to enroll
-                <ArrowIcon />
-              </ExternalButtonLink>
-              <ExternalButtonLink
-                href={school.phoneHref}
-                variant="outline"
-                size="lg"
-              >
-                Call {school.phone}
-              </ExternalButtonLink>
-            </div>
+            {/* .bind fixes the leading `sibling` argument; React then passes FormData
+                as the next argument, which this action ignores. */}
+            <form action={startEnrollmentAction.bind(null, false)} className="mt-7">
+              <SubmitButton label="Begin enrollment" pendingLabel="Starting…" />
+            </form>
 
             <div className="mt-12">
               <h2 className="font-serif text-xl font-bold text-navy-900">
-                What happens after you reach out
+                What happens after you submit
               </h2>
               <div className="mt-6">
                 <ProcessSteps steps={admissionsSteps} />
               </div>
+            </div>
+
+            <div className="mt-10">
+              <Callout title="Prefer to do this in person or by phone?">
+                Call <a href={school.phoneHref}>{school.phone}</a> or email{" "}
+                <a href={`mailto:${school.email}`}>{school.email}</a> and the Head of
+                School will take your details directly. The online form is a
+                convenience, not a requirement.
+              </Callout>
             </div>
           </div>
 
@@ -86,8 +87,7 @@ export default function EnrollPage() {
                 What you will need
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                The enrollment agreement asks for all of the following. Gathering
-                it first makes the process quick.
+                Gathering these first makes the whole thing quick.
               </p>
 
               <dl className="mt-6 flex flex-col gap-5 text-sm">
@@ -96,8 +96,8 @@ export default function EnrollPage() {
                     label: "Student",
                     items: [
                       "Legal name and date of birth",
-                      "Current grade level",
-                      "Intended enrollment start date",
+                      "Current or intended grade level",
+                      "Intended start date",
                     ],
                   },
                   {
@@ -110,7 +110,7 @@ export default function EnrollPage() {
                   {
                     label: "Funding",
                     items: [
-                      "Whether you intend to apply for Iowa ESA funding, pay the monthly contribution directly, or request hardship consideration",
+                      "Whether you intend to apply for Iowa ESA funding, pay directly, or request hardship consideration",
                     ],
                   },
                   {
@@ -119,14 +119,6 @@ export default function EnrollPage() {
                       "Known conditions or allergies",
                       "Current medications",
                       "Doctor or clinic name and phone",
-                      "Immunization records — or a valid exemption",
-                    ],
-                  },
-                  {
-                    label: "Consents",
-                    items: [
-                      "Photo and media release decision",
-                      "Acknowledgment of the handbook and behavioral framework",
                     ],
                   },
                 ].map((group) => (
@@ -136,8 +128,8 @@ export default function EnrollPage() {
                     </dt>
                     <dd className="mt-1.5">
                       <ul className="flex list-disc flex-col gap-1 pl-4 leading-relaxed text-ink-muted">
-                        {group.items.map((i) => (
-                          <li key={i}>{i}</li>
+                        {group.items.map((item) => (
+                          <li key={item}>{item}</li>
                         ))}
                       </ul>
                     </dd>
@@ -147,11 +139,10 @@ export default function EnrollPage() {
             </div>
 
             <div className="mt-6">
-              <Callout title="Iowa immunization requirement" variant="statute">
-                Iowa law requires documentation of either immunization compliance
-                or a valid exemption for every enrolled student. You can bring
-                either to the intake meeting &mdash; nothing needs to be uploaded
-                or emailed.
+              <Callout title="Immunization paperwork" variant="statute">
+                Iowa law requires documentation of either immunization compliance or a
+                valid exemption. Bring it to your intake meeting &mdash; there is
+                nothing to upload here, and we do not ask you to email medical records.
               </Callout>
             </div>
           </aside>
@@ -161,52 +152,24 @@ export default function EnrollPage() {
       <Section tone="muted" width="narrow">
         <SectionHeading
           eyebrow="Before you sign"
-          title="Read what you will be agreeing to"
-          lead="The enrollment agreement asks families to affirm eight specific commitments. None of them are boilerplate."
+          title="Read the handbook first"
+          lead="The agreement asks you to affirm eight specific commitments. None are boilerplate, and all of them are things families occasionally decide they do not want."
         />
         <Prose className="mt-6">
-          <ul>
-            <li>
-              Students advance on <strong>demonstrated mastery</strong>, not by
-              calendar year.
-            </li>
-            <li>
-              Taekwondo is a <strong>core and required</strong> component of
-              enrollment, not an elective.
-            </li>
-            <li>
-              Graduation is earned through academic and character mastery, and is
-              not conferred by age.
-            </li>
-            <li>
-              Families maintain consistent attendance and communicate promptly
-              about absences.
-            </li>
-            <li>
-              Families accept the behavioral framework, including the Three
-              Pillars of Pivotal Behavior.
-            </li>
-            <li>
-              Families acknowledge the{" "}
-              {tuition.monthlyContributionLabel.toLowerCase()} contribution and
-              agree to timely payment.
-            </li>
-            <li>
-              Families consent to participation in all regular school activities,
-              including Taekwondo training.
-            </li>
-            <li>
-              Families understand that records are kept confidentially and are
-              accessible to them on request.
-            </li>
-          </ul>
           <p>
-            All of this is spelled out in the{" "}
-            <Link href="/handbook">Student &amp; Family Handbook</Link>. We would
-            rather you read it now and decide we are not a fit than sign and
-            discover it later.
+            Taekwondo is required. Progression is earned rather than scheduled.
+            Graduation is not conferred by age. Families are expected to communicate.
+          </p>
+          <p>
+            All of it is spelled out in the{" "}
+            <Link href="/handbook">Student &amp; Family Handbook</Link>.
           </p>
         </Prose>
+        <div className="mt-6">
+          <ExternalButtonLink href={`mailto:${school.email}`} variant="outline">
+            Ask a question first
+          </ExternalButtonLink>
+        </div>
       </Section>
     </>
   );
