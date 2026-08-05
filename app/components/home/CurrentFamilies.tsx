@@ -41,17 +41,19 @@ export default function CurrentFamilies() {
               Students and parents sign in here
             </h2>
             {/*
-              Mentions ONLY the School Day app for now.
-              The family records portal (/portal) is built but no parent account can be
-              created yet — see the note in SiteFooter.tsx. Naming a destination a family
-              cannot reach is worse than not naming it. Restore the second sentence in the
-              same commit that ships parent-account creation.
+              Points enrolled families ENTIRELY at the School Day app, and promises nothing
+              about this site.
+              An earlier draft said records would "move here to the main site" — wrong, and
+              the kind of wrong that becomes a support call. This site is the ENROLLMENT
+              application; everything an already-enrolled family needs lives at
+              app.vaschool.org. See the division of intent documented on `dailyApp` in
+              lib/site.ts.
             */}
             <p className="mt-2 leading-relaxed text-ink-muted">
-              Daily check-in and the school day live in the{" "}
-              <strong className="text-navy-900">School Day app</strong> &mdash; the same
-              sign-in your student uses. Records and progress history will move here to the
-              main site once family accounts are ready.
+              Everything for enrolled families &mdash; daily check-in, the school day, and
+              your student&rsquo;s progress &mdash; lives in the{" "}
+              <strong className="text-navy-900">School Day app</strong>, using the same
+              sign-in your student uses. This site is just for enrolling.
             </p>
           </div>
 

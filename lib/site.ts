@@ -60,22 +60,25 @@ export const addressLine = `${school.address.street}, ${school.address.city}, ${
 /**
  * THE SCHOOL DAY APP — a SEPARATE application at app.vaschool.org.
  *
- * This is where already-enrolled students and parents sign in for the school day and daily
- * check-in. It is NOT this site, NOT part of enrollment, and shares no routes with us — a
- * different Vercel deployment with its own login.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * THE DIVISION OF INTENT (stated by the school, and load-bearing)
  *
- * ⚠️  KEEPING THE TWO STRAIGHT IS THE WHOLE POINT OF THE LINK COPY.
+ *   THIS SITE          → ENROLLMENT ONLY. Public information, and the funnel that turns a
+ *                        prospective family into a signed agreement. Plus the staff-side
+ *                        admin needed to review and act on those applications.
+ *   app.vaschool.org   → EVERYTHING FOR ALREADY-ENROLLED FAMILIES. Daily check-in, the
+ *                        school day, and student progress. Its own deployment, its own
+ *                        login; shares no routes with us (every route here 404s there).
  *
- * This site has its own `/login` and `/portal`, which serve a different purpose: the
- * permanent record — attendance history, mastery log, behavioral progress, Taekwondo rank,
- * and the family's signed enrollment agreement. Two sign-ins for two jobs is genuinely
- * confusing, so anywhere either is linked the copy must say which is which:
+ * The point of the split is that each site has ONE obvious job, so neither audience has to
+ * work out which one they need. Keep it that way:
  *
- *   app.vaschool.org  → today: check in, the school day
- *   /portal (here)    → the record: history, progress, the signed agreement
- *
- * A prospective family must never be sent here — they have no account, and a login wall is
- * the worst possible answer to "I want to enroll my child".
+ *  - Never promise an enrolled family anything on this site. An earlier draft of the home
+ *    page said records would "move here" — exactly the blurring this division exists to
+ *    prevent.
+ *  - Never send a PROSPECTIVE family to app.vaschool.org. They have no account, and a login
+ *    wall is the worst possible answer to "I want to enroll my child". Every link to it
+ *    carries a "Not enrolled yet?" escape hatch back to /enroll.
  */
 export const dailyApp = {
   url: "https://app.vaschool.org",

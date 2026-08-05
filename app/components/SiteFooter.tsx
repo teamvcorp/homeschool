@@ -131,12 +131,10 @@ export default function SiteFooter() {
                 </span>
               </li>
               {/*
-                ⚠️  NO "Family portal" LINK HERE YET — deliberately.
-                /portal is built and works, but nothing in the system can CREATE a parent
-                account: there is no admin users screen, and scripts/seed-admin.ts only makes
-                administrators. Linking families to a login they cannot pass would generate
-                support calls and erode trust in the rest of the site. Add this link in the
-                same commit that ships parent-account creation.
+                ⚠️  NO family-records link here, and that is ARCHITECTURE, not an omission.
+                This site handles ENROLLMENT ONLY; everything for an already-enrolled family
+                lives at app.vaschool.org. See the division of intent on `dailyApp` in
+                lib/site.ts before adding anything family-facing here.
               */}
               <li>
                 <Link
