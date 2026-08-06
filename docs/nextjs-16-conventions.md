@@ -161,3 +161,69 @@ those files before "simplifying" them back.
 
 The regression test is simple and worth keeping: **`npm run build` must succeed with
 `.env.local` absent.**
+
+---
+
+## Error handling (Next 16.3.0)
+
+Read from `node_modules/next/dist/docs/01-app/` on 2026-08-06. Recorded here so the same
+research does not have to happen twice — several of these differ from older releases.
+
+### `retry`, not `reset`
+
+`error.tsx` and `global-error.tsx` receive **`retry`**, not `reset`:
+
+```tsx
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void })
+```
+
+`reset` still exists but only clears the boundary's state **without re-fetching**, so it
+cannot recover from a Server Component failure — which is most of what reaches these
+boundaries. Use `retry()` unless you specifically want the non-refetching behaviour.
+
+### `error.digest` is the built-in log correlator
+
+A Server Component's real error message is replaced with a generic one before it reaches the
+browser, deliberately, so nothing sensitive leaks. `error.digest` is the hash that survives
+and appears in the server log. **Do not invent a competing reference id** — display the
+digest, and reuse it as the reference wherever one already exists (`lib/errors.ts` does).
+
+### `global-error.tsx` renders its own document, without global styles
+
+It replaces the root layout, must supply its own `<html>`/`<body>`, and the docs are explicit
+that global styles are **not** included — so an app-level theme class never reaches it. Ours
+uses inline styles throughout for a second reason: it is the boundary that catches the root
+layout failing, so the stylesheet or font loader may be exactly what broke.
+
+`metadata` / `generateMetadata` are unsupported there (it is a Client Component). Use React's
+`<title>` component instead.
+
+### `onRequestError` in `instrumentation.ts` — the widest server-side net
+
+Signature is `(error: unknown, request, context)`. The useful field is `context.routeType`:
+`'render' | 'route' | 'action' | 'proxy'`, which tells you immediately whether a page, an
+endpoint, a form submission, or middleware failed. `error` is typed `unknown` — narrow before
+reading `.message`.
+
+Two traps, both hit while building this:
+
+- **`instrumentation.ts` is loaded outside the App Router's Server Component graph and can be
+  evaluated in the Edge runtime.** Anything it imports must be runtime-agnostic: a
+  `server-only` marker throws at import, and `node:crypto` does not exist. Use `globalThis.crypto`.
+  The build failure is reported as *"You're importing a module that depends on `server-only` …
+  but you are using it in the Pages Router"*, which is misleading — there is no Pages Router
+  involved.
+- **`redirect()` and `notFound()` arrive here looking like errors**, because both are
+  implemented by throwing. Filter on `digest.startsWith("NEXT_REDIRECT")` and
+  `digest === "NEXT_NOT_FOUND"` or every successful redirect is logged as a failure.
+
+`register()` is optional and we deliberately do not export one — it runs before the server
+accepts traffic, and anything slow or fallible in it delays or prevents startup.
+
+### `catchError` (new in 16.2, stable in 16.3)
+
+`import { catchError } from 'next/error'` builds a component-level error boundary anywhere in
+the tree, as a programmatic alternative to the `error.js` file convention. Handles
+`redirect()`/`notFound()` correctly and supports `retry()`. We do not use it — our boundaries
+are route-segment shaped — but it is the right tool for wrapping one widget rather than a
+route.
