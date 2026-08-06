@@ -162,15 +162,98 @@ if (!form) {
   const page = await get(jar, "/enroll");
   check("Page still renders with the cookie set", page.status === 200);
   const spanishForm = findToggleForm(page.body);
-  /**
-   * With Spanish selected, the Spanish button becomes the disabled/current one. Asserting
-   * on aria-current rather than on translated copy keeps this check meaningful regardless
-   * of how much of the funnel has been translated yet.
-   */
   check(
     "Spanish is now marked as the current language",
     /lang="es"[^>]*aria-current|aria-current="true"[^>]*lang="es"/.test(page.body) ||
       (spanishForm?.html ?? "").includes('aria-current="true"'),
+  );
+}
+
+/* ---------- THE POINT OF THE FEATURE: the visible copy actually changes ---------- */
+{
+  /**
+   * This is the assertion that matters. Everything above proves the plumbing works — the
+   * cookie round-trips, the wrapper carries `lang` — and all of it could pass while a
+   * family still read an English form. Earlier this check deliberately avoided translated
+   * copy because none existed yet; keeping it that way would have quietly certified a
+   * half-finished feature.
+   *
+   * Driven on a real wizard step rather than the start page, because the steps are where
+   * a family actually has to understand something to proceed.
+   */
+  const es = newJar();
+  const start = await get(es, "/enroll");
+  const f = findToggleForm(start.body);
+  await submitToggle(es, "/enroll", f, { lang: "es", returnTo: "/enroll" });
+
+  // Begin an agreement so the step pages are reachable (they redirect without a draft).
+  const beginForm = (start.body.match(/<form[\s\S]*?<\/form>/g) ?? []).find(
+    (x) => !x.includes('name="returnTo"') && x.includes("$ACTION_REF_"),
+  );
+  if (beginForm) {
+    const n = beginForm.match(/name="[$]ACTION_REF_(\d+)"/)?.[1];
+    const id = beginForm.match(new RegExp(`name="[$]ACTION_${n}:0" value="([^"]+)"`));
+    const st = beginForm.match(new RegExp(`name="[$]ACTION_${n}:1" value="([^"]+)"`));
+    const key = beginForm.match(/name="[$]ACTION_KEY" value="([^"]*)"/);
+    const fd = new FormData();
+    fd.set(`$ACTION_REF_${n}`, "");
+    fd.set(`$ACTION_${n}:0`, (id?.[1] ?? "").replace(/&quot;/g, '"'));
+    fd.set(`$ACTION_${n}:1`, (st?.[1] ?? '[{"ok":false}]').replace(/&quot;/g, '"'));
+    if (key) fd.set("$ACTION_KEY", key[1]);
+    const r = await fetch(BASE + "/enroll", {
+      method: "POST",
+      headers: { Cookie: hdr(es), Origin: BASE },
+      body: fd,
+      redirect: "manual",
+    });
+    store(es, r);
+    await r.text();
+  }
+
+  const step = await get(es, "/enroll/student");
+  check("Student step reachable in Spanish", step.status === 200, `status=${step.status}`);
+
+  check(
+    "Field labels are in Spanish",
+    step.body.includes("Nombre legal completo del estudiante"),
+  );
+  check("Hints are in Spanish", step.body.includes("acta de nacimiento"));
+  check("The submit button is in Spanish", step.body.includes("Guardar y continuar"));
+  check("The step name is in Spanish", step.body.includes("Estudiante"));
+  check(
+    "The progress indicator is in Spanish",
+    /Paso\s*1\s*de\s*8/.test(step.body.replace(/<[^>]+>/g, " ")),
+  );
+  check(
+    "No English label leaked through",
+    !step.body.includes("Student&#x27;s full legal name") &&
+      !step.body.includes("Save and continue"),
+  );
+
+  /**
+   * FIELD NAMES MUST STAY ENGLISH. They are the wire format the server validates
+   * against — translating them would break every submission. This is the boundary the
+   * school asked for: visible text changes, nothing else.
+   */
+  check(
+    "SCOPE: form field names are still English",
+    step.body.includes('name="studentLegalName"') &&
+      step.body.includes('name="dateOfBirth"'),
+    "translating these would break submission",
+  );
+
+  // And a Lao pass, to prove the catalogue is wired for all three rather than just es.
+  const lo = newJar();
+  const loStart = await get(lo, "/enroll");
+  await submitToggle(lo, "/enroll", findToggleForm(loStart.body), {
+    lang: "lo",
+    returnTo: "/enroll",
+  });
+  const loPage = await get(lo, "/enroll");
+  check(
+    "Lao copy renders on the start page",
+    loPage.body.includes("ພາສາ"),
+    "Lao script present, so the catalogue and font path are live",
   );
 }
 

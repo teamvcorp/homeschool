@@ -92,6 +92,108 @@ export const es = {
   "language.label": "Idioma",
   "language.change": "Cambiar idioma",
   "language.current": "Idioma actual: {language}",
+
+  /* ===================== THE ENROLLMENT FUNNEL (UI copy) ==================== */
+
+  "funnel.eyebrow": "Acuerdo de inscripción familiar",
+
+  "funnel.step.student": "Estudiante",
+  "funnel.step.guardian": "Padre / tutor",
+  "funnel.step.funding": "Financiamiento",
+  "funnel.step.medical": "Salud",
+  "funnel.step.acknowledgments": "Reconocimientos",
+  "funnel.step.media": "Fotos y video",
+  "funnel.step.review": "Revisar",
+  "funnel.step.sign": "Firmar",
+
+  "funnel.review.lead":
+    "Revise todo antes de firmar. Todavía puede regresar y cambiar cualquier cosa.",
+  "funnel.sign.lead": "Un último paso.",
+
+  "funnel.carryOver.title": "Copiado de su acuerdo anterior",
+  "funnel.carryOver.body":
+    "Hemos completado estos datos con la información del acuerdo que acaba de terminar. Por favor confirme que siguen siendo correctos para este niño antes de continuar; puede cambiar cualquier dato aquí.",
+
+  /* --- Paso 1: estudiante --- */
+  "funnel.field.studentLegalName.label": "Nombre legal completo del estudiante",
+  "funnel.field.studentLegalName.hint":
+    "Tal como aparece en su acta de nacimiento o documentos legales.",
+  "funnel.field.dateOfBirth.label": "Fecha de nacimiento",
+  "funnel.field.gradeLevel.label": "Grado actual o previsto",
+  "funnel.field.gradeLevel.placeholder": "por ejemplo, Grado 5",
+  "funnel.field.gradeLevel.hint":
+    "Una estimación es suficiente; la ubicación se confirma en la reunión inicial.",
+  "funnel.field.requestedCohort.label": "¿Cuál grupo le parece adecuado?",
+  "funnel.field.requestedCohort.hint":
+    "Los grupos reflejan la preparación del estudiante, no su edad. El Director de la Escuela confirma la ubicación.",
+  "funnel.field.enrollmentStartDate.label": "Fecha de inicio prevista",
+
+  /* --- Paso 2: padre / tutor --- */
+  "funnel.field.guardianName.label": "Nombre(s) del padre / tutor",
+  "funnel.field.guardianAddress.label": "Domicilio",
+  "funnel.field.guardianPhone.label": "Teléfono principal",
+  "funnel.field.guardianEmail.label": "Correo electrónico",
+  "funnel.field.guardianEmail.hint":
+    "Aquí le enviaremos su confirmación y los siguientes pasos.",
+  "funnel.field.emergencyContactName.label":
+    "Contacto de emergencia (si es diferente)",
+  "funnel.field.emergencyContactPhone.label": "Teléfono del contacto de emergencia",
+
+  /* --- Paso 3: financiamiento --- */
+  "funnel.funding.legend": "¿Cómo se pagará la matrícula?",
+  "funnel.funding.hint":
+    "Las solicitudes de ESA se hacen directamente ante el Departamento de Educación de Iowa. Le proporcionaremos cualquier documentación que su solicitud necesite.",
+  "funnel.funding.esa.label": "Pensamos solicitar fondos ESA de Iowa",
+  "funnel.funding.esa.description":
+    "Aproximadamente ${esaEstimate} por estudiante al año, pagados por el Estado de Iowa.",
+  "funnel.funding.direct.label": "Pagaremos la contribución mensual directamente",
+  "funnel.funding.direct.description": "${monthlyContribution} por estudiante al mes.",
+  "funnel.funding.hardship.label":
+    "Solicitamos que se considere nuestra situación económica",
+  "funnel.funding.hardship.description":
+    "El Director de la Escuela lo conversará con usted en privado. Ningún estudiante queda fuera por motivos de dinero sin que hablemos primero.",
+
+  /* --- Paso 4: salud --- */
+  "funnel.field.conditionsAndAllergies.label":
+    "Condiciones médicas o alergias conocidas",
+  "funnel.field.conditionsAndAllergies.hint":
+    "Cualquier cosa que el personal deba saber para mantener seguro a su estudiante. Déjelo en blanco si no aplica.",
+  "funnel.field.medications.label": "Medicamentos actuales",
+  "funnel.field.doctorName.label": "Nombre del médico o de la clínica",
+  "funnel.field.doctorPhone.label": "Teléfono del médico o de la clínica",
+  "funnel.immunization.legend": "Documentación de vacunas",
+  "funnel.immunization.hint":
+    "La ley de Iowa exige documentación del cumplimiento del esquema de vacunas o una exención válida. Traiga los documentos a su reunión inicial; aquí no hace falta subir nada.",
+  "funnel.immunization.records": "Tenemos disponible el registro de vacunas",
+  "funnel.immunization.exemption": "Tenemos disponible una exención válida",
+
+  /* --- Paso 5: reconocimientos --- */
+  "funnel.acknowledgments.legend": "Reconocimientos del programa",
+  "funnel.acknowledgments.intro":
+    "Se deben aceptar los ocho. Preferimos que los lea y decida que no somos la escuela adecuada, en lugar de que firme y lo descubra en el segundo mes.",
+
+  /* --- Paso 6: fotos y video --- */
+  "funnel.media.legend": "Autorización de fotografías y video",
+  "funnel.media.hint":
+    "No hay una opción predeterminada ni una respuesta incorrecta. Negarse no cambia en nada la participación de su estudiante.",
+  "funnel.media.consent":
+    "Doy mi consentimiento para que se usen fotografías o videos de mi estudiante en materiales de promoción de la escuela",
+  "funnel.media.noConsent":
+    "NO doy mi consentimiento para que se usen fotografías o videos de mi estudiante con fines de promoción",
+
+  /* --- Indicador de progreso --- */
+  "funnel.progress.label": "Progreso de la inscripción",
+  "funnel.progress.position": "Paso {current} de {total}",
+  "funnel.progress.done": "completado",
+  "funnel.progress.current": "paso actual",
+  "funnel.progress.upcoming": "sin comenzar",
+
+  /* --- Controles --- */
+  "funnel.save": "Guardar y continuar",
+  "funnel.saving": "Guardando…",
+  "funnel.back": "Atrás",
+  "funnel.privacyNote":
+    "Su progreso se guarda a medida que avanza y se mantiene privado. Puede cerrar esta página y regresar desde el mismo dispositivo.",
 } as const satisfies Record<keyof typeof en, string>;
 
 export default es;

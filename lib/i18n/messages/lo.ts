@@ -97,6 +97,105 @@ export const lo = {
   "language.label": "ພາສາ",
   "language.change": "ປ່ຽນພາສາ",
   "language.current": "ພາສາປັດຈຸບັນ: {language}",
+
+  /* ===================== THE ENROLLMENT FUNNEL (UI copy) ==================== */
+
+  "funnel.eyebrow": "ສັນຍາການລົງທະບຽນຄອບຄົວ",
+
+  "funnel.step.student": "ນັກຮຽນ",
+  "funnel.step.guardian": "ພໍ່ແມ່ / ຜູ້ປົກຄອງ",
+  "funnel.step.funding": "ການຊຳລະເງິນ",
+  "funnel.step.medical": "ສຸຂະພາບ",
+  "funnel.step.acknowledgments": "ການຮັບຮູ້",
+  "funnel.step.media": "ຮູບພາບ ແລະ ວິດີໂອ",
+  "funnel.step.review": "ຕວດຄືນ",
+  "funnel.step.sign": "ເຊັນຊື່",
+
+  "funnel.review.lead":
+    "ກະລຸນາຕວດຄືນທຸກຢ່າງກ່ອນເຊັນ. ທ່ານຍັງສາມາດກັບຄືນໄປແກ້ໄຂຂໍ້ມູນໃດກໍໄດ້.",
+  "funnel.sign.lead": "ຂັ້ນຕອນສຸດທ້າຍ.",
+
+  "funnel.carryOver.title": "ຄັດລອກມາຈາກສັນຍາກ່ອນໜ້າຂອງທ່ານ",
+  "funnel.carryOver.body":
+    "ພວກເຮົາໄດ້ຕື່ມຂໍ້ມູນເຫຼົ່ານີ້ຈາກສັນຍາທີ່ທ່ານຫາກໍສຳເລັດ. ກະລຸນາກວດສອບວ່າຂໍ້ມູນຍັງຖືກຕ້ອງສຳລັບເດັກຄົນນີ້ກ່ອນສືບຕໍ່ — ທ່ານສາມາດແກ້ໄຂຂໍ້ມູນໃດກໍໄດ້ຢູ່ນີ້.",
+
+  /* --- ຂັ້ນຕອນ 1: ນັກຮຽນ --- */
+  "funnel.field.studentLegalName.label": "ຊື່ ແລະ ນາມສະກຸນເຕັມຕາມກົດໝາຍຂອງນັກຮຽນ",
+  "funnel.field.studentLegalName.hint":
+    "ຕາມທີ່ປາກົດຢູ່ໃນໃບເກີດ ຫຼື ເອກະສານທາງກົດໝາຍ.",
+  "funnel.field.dateOfBirth.label": "ວັນເດືອນປີເກີດ",
+  "funnel.field.gradeLevel.label": "ຊັ້ນຮຽນປັດຈຸບັນ ຫຼື ທີ່ຕ້ອງການ",
+  "funnel.field.gradeLevel.placeholder": "ຕົວຢ່າງ: ຊັ້ນ 5",
+  "funnel.field.gradeLevel.hint":
+    "ປະມານກໍໄດ້ — ການຈັດຊັ້ນຈະຢືນຢັນໃນການພົບປະເບື້ອງຕົ້ນ.",
+  "funnel.field.requestedCohort.label": "ກຸ່ມໃດທີ່ເບິ່ງຄືວ່າເໝາະສົມ?",
+  "funnel.field.requestedCohort.hint":
+    "ການຈັດກຸ່ມພິຈາລະນາຄວາມພ້ອມ ບໍ່ແມ່ນອາຍຸ. ຜູ້ອຳນວຍການໂຮງຮຽນເປັນຜູ້ຢືນຢັນ.",
+  "funnel.field.enrollmentStartDate.label": "ວັນທີຕ້ອງການເລີ່ມຕົ້ນ",
+
+  /* --- ຂັ້ນຕອນ 2: ພໍ່ແມ່ / ຜູ້ປົກຄອງ --- */
+  "funnel.field.guardianName.label": "ຊື່ພໍ່ແມ່ / ຜູ້ປົກຄອງ",
+  "funnel.field.guardianAddress.label": "ທີ່ຢູ່ອາໄສ",
+  "funnel.field.guardianPhone.label": "ເບີໂທຫຼັກ",
+  "funnel.field.guardianEmail.label": "ອີເມວ",
+  "funnel.field.guardianEmail.hint":
+    "ພວກເຮົາຈະສົ່ງໃບຢືນຢັນ ແລະ ຂັ້ນຕອນຕໍ່ໄປໄປທີ່ນີ້.",
+  "funnel.field.emergencyContactName.label": "ຜູ້ຕິດຕໍ່ກໍລະນີສຸກເສີນ (ຖ້າຕ່າງກັນ)",
+  "funnel.field.emergencyContactPhone.label": "ເບີໂທຜູ້ຕິດຕໍ່ກໍລະນີສຸກເສີນ",
+
+  /* --- ຂັ້ນຕອນ 3: ການຊຳລະເງິນ --- */
+  "funnel.funding.legend": "ຄ່າຮຽນຈະຊຳລະດ້ວຍວິທີໃດ?",
+  "funnel.funding.hint":
+    "ການສະໝັກ ESA ຕ້ອງເຮັດຜ່ານກະຊວງສຶກສາທິການລັດໄອໂອວາໂດຍກົງ. ພວກເຮົາຈະຈັດຫາເອກະສານທີ່ການສະໝັກຂອງທ່ານຕ້ອງການ.",
+  "funnel.funding.esa.label": "ພວກເຮົາຕັ້ງໃຈຈະສະໝັກທຶນ ESA ຂອງລັດໄອໂອວາ",
+  "funnel.funding.esa.description":
+    "ປະມານ ${esaEstimate} ຕໍ່ນັກຮຽນຕໍ່ປີ, ຈ່າຍໂດຍລັດໄອໂອວາ.",
+  "funnel.funding.direct.label": "ພວກເຮົາຈະຈ່າຍເງິນສະໜັບສະໜູນລາຍເດືອນໂດຍກົງ",
+  "funnel.funding.direct.description": "${monthlyContribution} ຕໍ່ນັກຮຽນຕໍ່ເດືອນ.",
+  "funnel.funding.hardship.label": "ພວກເຮົາຂໍໃຫ້ພິຈາລະນາຄວາມຫຍຸ້ງຍາກທາງການເງິນ",
+  "funnel.funding.hardship.description":
+    "ຜູ້ອຳນວຍການໂຮງຮຽນຈະສົນທະນາເລື່ອງນີ້ກັບທ່ານເປັນສ່ວນຕົວ. ບໍ່ມີນັກຮຽນຄົນໃດຖືກປະຕິເສດເພາະເລື່ອງເງິນ ໂດຍທີ່ບໍ່ໄດ້ລົມກັນກ່ອນ.",
+
+  /* --- ຂັ້ນຕອນ 4: ສຸຂະພາບ --- */
+  "funnel.field.conditionsAndAllergies.label": "ໂລກປະຈຳຕົວ ຫຼື ອາການແພ້ທີ່ຮູ້ຈັກ",
+  "funnel.field.conditionsAndAllergies.hint":
+    "ສິ່ງໃດກໍຕາມທີ່ພະນັກງານຄວນຮູ້ເພື່ອຄວາມປອດໄພຂອງນັກຮຽນ. ຖ້າບໍ່ມີ ໃຫ້ປະວ່າງໄວ້.",
+  "funnel.field.medications.label": "ຢາທີ່ກຳລັງໃຊ້ຢູ່",
+  "funnel.field.doctorName.label": "ຊື່ແພດ ຫຼື ຄລີນິກ",
+  "funnel.field.doctorPhone.label": "ເບີໂທແພດ ຫຼື ຄລີນິກ",
+  "funnel.immunization.legend": "ເອກະສານການສັກຢາປ້ອງກັນ",
+  "funnel.immunization.hint":
+    "ກົດໝາຍລັດໄອໂອວາຕ້ອງການເອກະສານຢືນຢັນການສັກຢາປ້ອງກັນ ຫຼື ໃບຍົກເວັ້ນທີ່ຖືກຕ້ອງ. ກະລຸນານຳເອກະສານມາໃນວັນພົບປະເບື້ອງຕົ້ນ — ບໍ່ຈຳເປັນຕ້ອງອັບໂຫຼດຢູ່ນີ້.",
+  "funnel.immunization.records": "ພວກເຮົາມີບັນທຶກການສັກຢາປ້ອງກັນ",
+  "funnel.immunization.exemption": "ພວກເຮົາມີໃບຍົກເວັ້ນທີ່ຖືກຕ້ອງ",
+
+  /* --- ຂັ້ນຕອນ 5: ການຮັບຮູ້ --- */
+  "funnel.acknowledgments.legend": "ການຮັບຮູ້ກ່ຽວກັບໂຄງການ",
+  "funnel.acknowledgments.intro":
+    "ຕ້ອງຍອມຮັບທັງແປດຂໍ້. ພວກເຮົາຢາກໃຫ້ທ່ານອ່ານແລ້ວຕັດສິນວ່າພວກເຮົາບໍ່ແມ່ນໂຮງຮຽນທີ່ເໝາະສົມ ດີກວ່າການເຊັນແລ້ວມາຮູ້ໃນເດືອນທີສອງ.",
+
+  /* --- ຂັ້ນຕອນ 6: ຮູບພາບ ແລະ ວິດີໂອ --- */
+  "funnel.media.legend": "ການອະນຸຍາດໃຊ້ຮູບພາບ ແລະ ວິດີໂອ",
+  "funnel.media.hint":
+    "ບໍ່ມີຄຳຕອບທີ່ຕັ້ງໄວ້ລ່ວງໜ້າ ແລະ ບໍ່ມີຄຳຕອບທີ່ຜິດ. ການປະຕິເສດບໍ່ມີຜົນຕໍ່ການເຂົ້າຮ່ວມຂອງນັກຮຽນ.",
+  "funnel.media.consent":
+    "ຂ້າພະເຈົ້າອະນຸຍາດໃຫ້ໃຊ້ຮູບພາບ ຫຼື ວິດີໂອຂອງນັກຮຽນໃນສື່ປະຊາສຳພັນຂອງໂຮງຮຽນ",
+  "funnel.media.noConsent":
+    "ຂ້າພະເຈົ້າ ບໍ່ ອະນຸຍາດໃຫ້ໃຊ້ຮູບພາບ ຫຼື ວິດີໂອຂອງນັກຮຽນເພື່ອການປະຊາສຳພັນໃດໆ",
+
+  /* --- ຕົວຊີ້ວັດຄວາມຄືບໜ້າ --- */
+  "funnel.progress.label": "ຄວາມຄືບໜ້າການລົງທະບຽນ",
+  "funnel.progress.position": "ຂັ້ນຕອນທີ {current} ຈາກ {total}",
+  "funnel.progress.done": "ສຳເລັດແລ້ວ",
+  "funnel.progress.current": "ຂັ້ນຕອນປັດຈຸບັນ",
+  "funnel.progress.upcoming": "ຍັງບໍ່ໄດ້ເລີ່ມ",
+
+  /* --- ປຸ່ມຄວບຄຸມ --- */
+  "funnel.save": "ບັນທຶກ ແລະ ສືບຕໍ່",
+  "funnel.saving": "ກຳລັງບັນທຶກ…",
+  "funnel.back": "ກັບຄືນ",
+  "funnel.privacyNote":
+    "ຂໍ້ມູນຂອງທ່ານຈະຖືກບັນທຶກໄວ້ເລື້ອຍໆ ແລະ ເກັບເປັນຄວາມລັບ. ທ່ານສາມາດປິດໜ້ານີ້ ແລະ ກັບມາຕໍ່ຈາກອຸປະກອນເກົ່າໄດ້.",
 } as const satisfies Record<keyof typeof en, string>;
 
 export default lo;

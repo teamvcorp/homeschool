@@ -16,6 +16,8 @@ import { Section } from "@/app/components/ui/Section";
 import { StepIndicator } from "@/app/components/forms/StepIndicator";
 import LanguageToggle from "@/app/components/forms/LanguageToggle";
 import { getLocale } from "@/lib/i18n/server";
+import { translator } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n";
 import StepForm from "./step-form";
 import ReviewPanel from "./review-panel";
 import SignPanel from "./sign-panel";
@@ -48,6 +50,17 @@ export default async function EnrollStepPage({
   if (!step) notFound();
 
   const locale = await getLocale();
+  const tr = translator(locale);
+
+  /**
+   * Step names are translated at RENDER time rather than in ENROLLMENT_STEPS.
+   *
+   * That array is the validation registry — its `slug` values are route segments and its
+   * schemas are the server's source of truth — so it must stay in one language. The slugs
+   * line up with `funnel.step.<slug>` keys, which keeps the mapping to a template literal
+   * instead of a lookup table that could fall out of sync.
+   */
+  const stepTitle = (s: StepSlug) => tr(`funnel.step.${s}` as MessageKey);
 
   const draft = await loadActiveDraft();
 
@@ -136,20 +149,20 @@ export default async function EnrollStepPage({
       </div>
 
       <PageHeader
-        eyebrow="Family enrollment agreement"
-        title={step.title}
+        eyebrow={tr("funnel.eyebrow")}
+        title={stepTitle(slug as StepSlug)}
         lead={
           slug === "review"
-            ? "Check everything over before you sign. You can still go back and change anything."
+            ? tr("funnel.review.lead")
             : slug === "sign"
-              ? "One last step."
+              ? tr("funnel.sign.lead")
               : undefined
         }
       />
 
       <Section width="narrow">
         <div className="flex flex-col gap-8">
-          <StepIndicator current={slug as StepSlug} />
+          <StepIndicator current={slug as StepSlug} locale={locale} />
 
           {slug === "review" ? (
             <ReviewPanel data={data} warning={warning} />
@@ -166,6 +179,7 @@ export default async function EnrollStepPage({
               acknowledgments={[...ACKNOWLEDGMENT_LIST]}
               previousHref={previous}
               showCarryOverNotice={showCarryOverNotice}
+              locale={locale}
             />
           )}
         </div>

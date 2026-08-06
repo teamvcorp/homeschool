@@ -121,6 +121,112 @@ export const en = {
   "language.label": "Language",
   "language.change": "Change language",
   "language.current": "Current language: {language}",
+
+  /* ===================== THE ENROLLMENT FUNNEL (UI copy) ==================== */
+  /*
+   * VISIBLE INTERFACE TEXT ONLY. Nothing here is stored, nothing here is sent to the
+   * state, and nothing here is part of the enrollment agreement. Field NAMES stay in
+   * English because they are the wire format the server validates against; only what a
+   * family reads is translated.
+   */
+
+  "funnel.eyebrow": "Family enrollment agreement",
+
+  /** Step names — shown in the progress indicator and as each step's heading. */
+  "funnel.step.student": "Student",
+  "funnel.step.guardian": "Parent / guardian",
+  "funnel.step.funding": "Funding",
+  "funnel.step.medical": "Medical",
+  "funnel.step.acknowledgments": "Acknowledgments",
+  "funnel.step.media": "Photo & media",
+  "funnel.step.review": "Review",
+  "funnel.step.sign": "Sign",
+
+  "funnel.review.lead":
+    "Check everything over before you sign. You can still go back and change anything.",
+  "funnel.sign.lead": "One last step.",
+
+  "funnel.carryOver.title": "Carried over from your last agreement",
+  "funnel.carryOver.body":
+    "We have filled these in from the agreement you just completed. Please check they are still correct for this child before continuing — you can change anything here.",
+
+  /* --- Step 1: student --- */
+  "funnel.field.studentLegalName.label": "Student's full legal name",
+  "funnel.field.studentLegalName.hint":
+    "As it appears on their birth certificate or legal records.",
+  "funnel.field.dateOfBirth.label": "Date of birth",
+  "funnel.field.gradeLevel.label": "Current or intended grade level",
+  "funnel.field.gradeLevel.placeholder": "e.g. Grade 5",
+  "funnel.field.gradeLevel.hint":
+    "Your best estimate is fine — placement is confirmed at the intake meeting.",
+  "funnel.field.requestedCohort.label": "Which cohort seems right?",
+  "funnel.field.requestedCohort.hint":
+    "Cohorts reflect readiness rather than age. The Head of School confirms placement.",
+  "funnel.field.enrollmentStartDate.label": "Intended start date",
+
+  /* --- Step 2: guardian --- */
+  "funnel.field.guardianName.label": "Parent / guardian name(s)",
+  "funnel.field.guardianAddress.label": "Home address",
+  "funnel.field.guardianPhone.label": "Primary phone",
+  "funnel.field.guardianEmail.label": "Email address",
+  "funnel.field.guardianEmail.hint": "We send your confirmation and next steps here.",
+  "funnel.field.emergencyContactName.label": "Emergency contact (if different)",
+  "funnel.field.emergencyContactPhone.label": "Emergency contact phone",
+
+  /* --- Step 3: funding --- */
+  "funnel.funding.legend": "How will tuition be funded?",
+  "funnel.funding.hint":
+    "ESA applications are made directly through the Iowa Department of Education. We will provide any documentation your application needs.",
+  "funnel.funding.esa.label": "We intend to apply for Iowa ESA funding",
+  "funnel.funding.esa.description":
+    "Approximately ${esaEstimate} per student per year, paid by the State of Iowa.",
+  "funnel.funding.direct.label": "We will pay the monthly contribution directly",
+  "funnel.funding.direct.description": "${monthlyContribution} per student per month.",
+  "funnel.funding.hardship.label":
+    "We are applying for financial hardship consideration",
+  "funnel.funding.hardship.description":
+    "The Head of School will discuss this with you privately. No student is turned away over money without a conversation first.",
+
+  /* --- Step 4: medical --- */
+  "funnel.field.conditionsAndAllergies.label": "Known medical conditions or allergies",
+  "funnel.field.conditionsAndAllergies.hint":
+    "Anything staff should know to keep your student safe. Leave blank if none.",
+  "funnel.field.medications.label": "Current medications",
+  "funnel.field.doctorName.label": "Doctor or clinic name",
+  "funnel.field.doctorPhone.label": "Doctor or clinic phone",
+  "funnel.immunization.legend": "Immunization documentation",
+  "funnel.immunization.hint":
+    "Iowa law requires documentation of either immunization compliance or a valid exemption. Bring the paperwork to your intake meeting — nothing needs uploading here.",
+  "funnel.immunization.records": "Immunization records are available",
+  "funnel.immunization.exemption": "A valid exemption is available",
+
+  /* --- Step 5: acknowledgments --- */
+  "funnel.acknowledgments.legend": "Program acknowledgments",
+  "funnel.acknowledgments.intro":
+    "All eight must be accepted. We would rather you read them and decide we are not the right school than sign and discover it in month two.",
+
+  /* --- Step 6: media --- */
+  "funnel.media.legend": "Photo and media release",
+  "funnel.media.hint":
+    "There is no default and no wrong answer. Declining changes nothing about your student's participation.",
+  "funnel.media.consent":
+    "I consent to photographs or video of my student being used for school promotional materials",
+  "funnel.media.noConsent":
+    "I do NOT consent to photographs or video of my student for any promotional use",
+
+  /* --- Progress indicator --- */
+  "funnel.progress.label": "Enrollment progress",
+  "funnel.progress.position": "Step {current} of {total}",
+  "funnel.progress.done": "completed",
+  "funnel.progress.current": "current step",
+  "funnel.progress.upcoming": "not started",
+
+  /* --- Controls --- */
+  "funnel.save": "Save and continue",
+  "funnel.saving": "Saving…",
+  "funnel.back": "Back",
+  "funnel.privacyNote":
+    "Your progress is saved as you go and is kept private. You can close this and come back on the same device.",
 } as const;
 
 export type MessageKey = keyof typeof en;
