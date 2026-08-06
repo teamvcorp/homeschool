@@ -29,7 +29,41 @@ export const school = {
   fullName: "The Von Der Becke Academy Corp · The VA School",
   tagline: "We don't lower the bar. We raise the student.",
 
+  /**
+   * THREE DIFFERENT DATES. CONFLATING THEM PUT FALSE CLAIMS ON THE SITE.
+   *
+   *   2012      the CORPORATION was established — in FLORIDA, not Iowa.
+   *   end 2019  the school RELOCATED to Storm Lake.
+   *   2020      the school OPENED in Storm Lake and began teaching Iowa families.
+   *
+   * An earlier version of this file carried `established: 2012` alone, so every page that
+   * combined it with the Iowa address produced a claim that was simply untrue: "Serving
+   * Storm Lake, Iowa since 2012", "Founded 2012 in Storm Lake", and — worst — "has served
+   * Iowa students and families for 14 consecutive years" inside the Iowa Department of
+   * Education application narrative itself.
+   *
+   * That matters more than ordinary copy drift, because this site publishes the
+   * accreditation packet a DE reviewer reads. An overstated operating history in Iowa is
+   * exactly the kind of inaccuracy that damages an application, and not the sort of thing
+   * a reviewer forgives as a typo.
+   *
+   * WHICH FIGURE TO USE
+   *   `yearsInOperation()`   the ORGANISATION's total history, from 2012. Never pair it
+   *                          with "Iowa", "Storm Lake", or "Buena Vista County".
+   *   `yearsInStormLake()`   years teaching in Iowa, from the 2020 OPENING. This is the
+   *                          figure a local family and a DE reviewer care about.
+   *
+   * The relocation year is recorded because it is a real part of the history, but the
+   * operating clock starts when the school OPENED, not when the boxes arrived.
+   */
   established: 2012,
+  /** Where the corporation was founded. Not Iowa — see the note above. */
+  establishedIn: "Florida",
+  /** Moved to Storm Lake at the end of this year; opened the following year. */
+  relocatedToStormLake: 2019,
+  /** The year the school OPENED in Storm Lake and began teaching Iowa families. */
+  inStormLakeSince: 2020,
+
   legalStatus: "Nonprofit Corporation — 501(c)(3)",
   headOfSchool: "Robert Von Der Becke",
 
@@ -89,9 +123,26 @@ export const dailyApp = {
   audience: "Already-enrolled students and parents",
 } as const;
 
-/** Years in continuous operation, computed so it never goes stale. */
+/**
+ * Years the ORGANISATION has operated, counting from its 2012 founding in Florida.
+ *
+ * ⚠️  THIS IS NOT THE IOWA FIGURE. Do not pair it with "in Storm Lake", "in Iowa", or
+ * "Buena Vista County" — use `yearsInStormLake()` for that. Getting these two mixed up is
+ * how the site came to claim fourteen years of Iowa operation.
+ */
 export function yearsInOperation(now: Date = new Date()): number {
   return now.getFullYear() - school.established;
+}
+
+/**
+ * Years the school has been TEACHING in Storm Lake, Iowa, counted from the 2020 opening.
+ *
+ * Deliberately not counted from the end-2019 relocation: a year spent moving is not a year
+ * of serving families, and the more conservative figure is the honest one to put in front
+ * of a reviewer.
+ */
+export function yearsInStormLake(now: Date = new Date()): number {
+  return now.getFullYear() - school.inStormLakeSince;
 }
 
 /* ==========================================================================
@@ -714,7 +765,7 @@ export const navigation: readonly NavItem[] = [
     label: "About",
     href: "/about",
     children: [
-      { label: "Our History", href: "/about", description: "Founded 2012 in Storm Lake" },
+      { label: "Our History", href: "/about", description: "Founded 2012; in Storm Lake since 2019" },
       { label: "Mission & Philosophy", href: "/mission", description: "What we believe and why" },
       { label: "Staff & Instructors", href: "/staff", description: "Who teaches here" },
       { label: "Accreditation", href: "/accreditation", description: "Our Iowa DE submission" },

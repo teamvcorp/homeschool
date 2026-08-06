@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { school, addressLine, yearsInOperation } from "@/lib/site";
+import { school, addressLine, yearsInStormLake } from "@/lib/site";
 import { accreditationDocs } from "@/lib/content/accreditation";
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default function AccreditationIndexPage() {
         <p className="leading-relaxed text-ink">
           This is the full submission for {school.legalName}, operating as{" "}
           {school.dbaName}, at {addressLine} &mdash; a {school.legalStatus} serving
-          Iowa families for {yearsInOperation()} consecutive years.
+          Iowa families for {yearsInStormLake()} consecutive years.
         </p>
         <p className="mt-3 leading-relaxed text-ink">
           Every document is linkable and prints cleanly. Reviewers are welcome to

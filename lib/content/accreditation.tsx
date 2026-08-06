@@ -3,6 +3,7 @@ import {
   school,
   addressLine,
   yearsInOperation,
+  yearsInStormLake,
   mission,
   vision,
   philosophy,
@@ -164,9 +165,19 @@ function Doc1() {
           ["County", school.address.county],
           ["Phone", school.phone],
           ["Email", school.email],
+          /**
+           * Two rows, not one. The corporation's founding year and its Iowa tenure are
+           * different facts, and a single "Year established: 2012 (14 years of continuous
+           * operation)" row next to an Iowa address reads as fourteen years in Iowa —
+           * which is not true and is precisely the overstatement a reviewer would catch.
+           */
           [
-            "Year established",
-            `${school.established} (${yearsInOperation()} years of continuous operation)`,
+            "Corporation established",
+            `${school.established} in ${school.establishedIn} (${yearsInOperation()} years of continuous operation)`,
+          ],
+          [
+            `Opened in ${school.address.city}, Iowa`,
+            `${school.inStormLakeSince} (${yearsInStormLake()} years; relocated from ${school.establishedIn} at the end of ${school.relocatedToStormLake})`,
           ],
           ["Legal status", school.legalStatus],
           ["Grade levels served", school.gradeLevels],
@@ -178,16 +189,19 @@ function Doc1() {
       <S n="1.2" title="Institutional History" />
       <P>
         The Von Der Becke Academy Corp was established in {school.established} in{" "}
-        {school.address.city}, Iowa, by {school.headOfSchool}, a career educator
-        and behavioral specialist with professional experience dating to 2004. The
+        {school.establishedIn} by {school.headOfSchool}, a career educator and
+        behavioral specialist with professional experience dating to 2004. The
         school was founded on the conviction that every student is capable of
         achieving at the highest levels when instruction is individualized,
         expectations are never lowered, and the learning environment is built on
         discipline, mastery, and character.
       </P>
       <P>
-        Operating in {school.address.county} for {yearsInOperation()} consecutive
-        years, The VA School has served students spanning kindergarten through high
+        The school relocated to {school.address.city}, Iowa at the end of{" "}
+        {school.relocatedToStormLake} and opened here in {school.inStormLakeSince},
+        giving it {yearsInStormLake()} consecutive years of operation in{" "}
+        {school.address.county} and {yearsInOperation()} years as an institution
+        overall. The VA School has served students spanning kindergarten through high
         school, maintaining continuous enrollment through its model of
         competency-based, ABA-informed instruction integrated with a martial arts
         discipline framework. Over its operational history, the school has produced
@@ -1045,7 +1059,11 @@ function Narrative() {
           ["Head of School", school.headOfSchool],
           [
             "Years in operation",
-            `${yearsInOperation()} years (established ${school.established})`,
+            `${yearsInOperation()} years (established ${school.established} in ${school.establishedIn})`,
+          ],
+          [
+            `Years operating in ${school.address.state}`,
+            `${yearsInStormLake()} years (opened in ${school.address.city} in ${school.inStormLakeSince})`,
           ],
           ["Legal status", school.legalStatus],
         ]}
@@ -1159,7 +1177,8 @@ function Narrative() {
       <S n="6" title="Summary Statement" />
       <P>
         {school.legalName} has served Iowa students and families for{" "}
-        {yearsInOperation()} consecutive years with a distinctive,
+        {yearsInStormLake()} consecutive years, and has operated as an institution
+        for {yearsInOperation()} years in total, with a distinctive,
         research-grounded instructional model that holds every student to the
         highest standard &mdash; and provides the individual support to reach it.
         The school&rsquo;s integration of Applied Behavior Analysis, Taekwondo

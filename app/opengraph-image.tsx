@@ -28,7 +28,11 @@ const crestDataUri = `data:image/png;base64,${readFileSync(
 ).toString("base64")}`;
 
 // Precomputed so each element below has exactly one text child.
-const eyebrow = `Storm Lake, Iowa · Est. ${school.established}`;
+/**
+ * The Iowa year, because it sits next to "Storm Lake, Iowa". The corporation's 2012
+ * founding was in Florida — see the note on `established` in lib/site.ts.
+ */
+const eyebrow = `Storm Lake, Iowa · Since ${school.inStormLakeSince}`;
 const taglineLineOne = "We don’t lower the bar.";
 const taglineLineTwo = "We raise the student.";
 

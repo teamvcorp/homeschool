@@ -1,4 +1,4 @@
-import { school, yearsInOperation } from "@/lib/site";
+import { school, yearsInStormLake } from "@/lib/site";
 import ImagePlaceholder from "../ImagePlaceholder";
 import { ButtonLink, ExternalButtonLink, ArrowIcon } from "../ui/Button";
 import { Eyebrow } from "../ui/Section";
@@ -69,20 +69,27 @@ export default function Hero() {
 
             {/* Credibility strip — facts, not adjectives. */}
             <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-line pt-6">
+              {/*
+                THE IOWA FIGURES, not the corporation's. A hero that reads
+                "Established 2012 / Years running 14" above a Storm Lake address claims
+                fourteen years in Iowa. The school has been here since 2019; the 2012
+                founding was in Florida, and that fuller history belongs on /about where
+                there is room to state it accurately.
+              */}
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wider text-ink-subtle">
-                  Established
+                  In Storm Lake since
                 </dt>
                 <dd className="mt-1 font-serif text-2xl font-bold text-navy-900">
-                  {school.established}
+                  {school.inStormLakeSince}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wider text-ink-subtle">
-                  Years running
+                  Years here
                 </dt>
                 <dd className="mt-1 font-serif text-2xl font-bold text-navy-900">
-                  {yearsInOperation()}
+                  {yearsInStormLake()}
                 </dd>
               </div>
               <div>

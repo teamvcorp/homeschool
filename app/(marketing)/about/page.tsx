@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { school, addressLine, yearsInOperation } from "@/lib/site";
+import { school, addressLine, yearsInOperation, yearsInStormLake } from "@/lib/site";
 import { PageHeader, Prose, FactList } from "@/app/components/ui/PageHeader";
 import { Section, SectionHeading } from "@/app/components/ui/Section";
 import { Callout } from "@/app/components/ui/Callout";
@@ -9,7 +9,7 @@ import ImagePlaceholder from "@/app/components/ImagePlaceholder";
 /** Source: accreditation package Document 1 — School Profile & Institutional History. */
 export const metadata: Metadata = {
   title: "Our History",
-  description: `Founded in ${school.established} in Storm Lake, Iowa, The VA School has served K–12 students for ${yearsInOperation()} consecutive years with mastery-based, ABA-informed instruction.`,
+  description: `Founded in ${school.established} in ${school.establishedIn} and in Storm Lake, Iowa since ${school.inStormLakeSince}, The VA School teaches K–12 students through mastery-based, ABA-informed instruction.`,
 };
 
 export default function AboutPage() {
@@ -17,8 +17,8 @@ export default function AboutPage() {
     <>
       <PageHeader
         eyebrow="About the school"
-        title="Fourteen years of not lowering the bar"
-        lead={`The Von Der Becke Academy Corp has operated continuously in Buena Vista County since 2020, on one conviction: every student can achieve at the highest level when instruction is individualized and expectations are never reduced.`}
+        title="Years of not lowering the bar"
+        lead={`The Von Der Becke Academy Corp has operated since ${school.established} and has taught families in ${school.address.county} since ${school.inStormLakeSince}, on one conviction: every student can achieve at the highest level when instruction is individualized and expectations are never reduced.`}
       />
 
       <Section>
@@ -28,7 +28,11 @@ export default function AboutPage() {
               <h2>How the school began</h2>
               <p>
                 The Von Der Becke Academy Corp was established in{" "}
-                {school.established} in Florida and has been in {school.address.city}, Iowa for the last 6 years. Founded by{" "}
+                {school.established} in {school.establishedIn}. The school moved to{" "}
+                {school.address.city}, Iowa at the end of{" "}
+                {school.relocatedToStormLake} and opened here in{" "}
+                {school.inStormLakeSince} &mdash; {yearsInStormLake()} years of
+                teaching Iowa families. Founded by{" "}
                 <strong>{school.headOfSchool}</strong>, a career educator and
                 behavioral specialist whose professional experience dates to
                 2004. The school was founded on the conviction that every student
@@ -38,7 +42,7 @@ export default function AboutPage() {
                 character.
               </p>
               <p>
-                Over 6 consecutive years in{" "}
+                Over {yearsInStormLake()} consecutive years in{" "}
                 {school.address.county}, the school has served students spanning
                 kindergarten through high school, maintaining continuous
                 enrollment through a model that few schools attempt:
@@ -101,7 +105,14 @@ export default function AboutPage() {
               { label: "Operating name", value: school.dbaName },
               { label: "Address", value: addressLine },
               { label: "County", value: school.address.county },
-              { label: "Year established", value: `${school.established} (${yearsInOperation()} years of continuous operation)` },
+              {
+                label: "Corporation established",
+                value: `${school.established} in ${school.establishedIn} (${yearsInOperation()} years of continuous operation)`,
+              },
+              {
+                label: `Opened in ${school.address.city}, Iowa`,
+                value: `${school.inStormLakeSince} (${yearsInStormLake()} years; relocated from ${school.establishedIn} at the end of ${school.relocatedToStormLake})`,
+              },
               { label: "Legal status", value: school.legalStatus },
               { label: "Grade levels served", value: school.gradeLevels },
               { label: "School calendar", value: school.calendar },

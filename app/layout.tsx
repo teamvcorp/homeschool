@@ -5,7 +5,7 @@ import "./globals.css";
 
 /**
  * Fonts. Source Serif 4 carries headings (an institutional, document-adjacent
- * brand — a geometric sans alone undercuts a 14-year accreditation claim), Geist
+ * brand — a geometric sans alone undercuts an accreditation claim), Geist
  * carries UI and body copy. Geist Mono was removed: nothing used it, and every
  * font shipped is bytes the visitor pays for.
  *
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     template: `%s — ${school.dbaName}`,
   },
   description:
-    "A K–12 nonpublic school in Storm Lake, Iowa. Mastery-based progression, ABA-informed instruction, and an integrated Taekwondo discipline framework. Serving families since 2012.",
+    "A K–12 nonpublic school in Storm Lake, Iowa. Mastery-based progression, ABA-informed instruction, and an integrated Taekwondo discipline framework. Serving Storm Lake families since 2019.",
   applicationName: school.dbaName,
   authors: [{ name: school.legalName }],
   keywords: [
@@ -124,6 +124,15 @@ function StructuredData() {
     email: school.email,
     telephone: school.phone,
     foundingDate: String(school.established),
+    /**
+     * The corporation was founded in Florida in 2012 and moved to Storm Lake in 2019.
+     * Without `foundingLocation`, `foundingDate` sitting beside an Iowa `address` reads
+     * as "founded here in 2012", which is not true.
+     */
+    foundingLocation: {
+      "@type": "Place",
+      address: { "@type": "PostalAddress", addressRegion: "FL", addressCountry: "US" },
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: school.address.street,
