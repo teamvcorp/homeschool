@@ -308,5 +308,13 @@ export const AUDIT_ACTIONS = [
   "partnership.update",
   "user.create",
   "user.update",
+  /**
+   * A user changed their own password.
+   *
+   * Audited because it is the event that separates "this account was used by its owner" from
+   * "this account was taken over". Every existing session is revoked at the same moment, so
+   * this entry is also the explanation for every other device being signed out.
+   */
+  "auth.passwordChanged",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

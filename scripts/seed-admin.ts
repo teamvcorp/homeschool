@@ -10,8 +10,16 @@
  *
  * The password is generated here rather than accepted as an argument, because a
  * password passed on the command line lands in shell history and process listings.
- * It is printed once. The account is flagged so the admin UI can require a change
- * on first sign-in.
+ * It is printed once and stored only as an Argon2id hash — it is not recoverable.
+ *
+ * CHANGE IT AFTER FIRST SIGN-IN, at /account.
+ *
+ * ⚠️  Nothing FORCES that change. An earlier version of this comment claimed the account
+ * was "flagged so the admin UI can require a change on first sign-in" — there was no flag
+ * and no such UI, so the generated password was simply the password the account kept.
+ * /account now exists (app/(secure)/account), but it is a place to change the password,
+ * not a gate. If forcing it matters, that needs a `mustChangePassword` field on UserDoc
+ * and a redirect in the authenticated pages — deliberately not built yet.
  */
 
 import { randomBytes } from "node:crypto";

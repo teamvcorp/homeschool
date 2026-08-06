@@ -40,9 +40,16 @@ export default function SecureHeader({
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-ink-muted sm:inline">
+            {/* The name is the link to your own account — where the password is changed.
+                A generated password is useless if the screen that replaces it cannot be
+                found, so this is reachable from every authenticated page rather than
+                buried under /admin, which parents and instructors cannot reach. */}
+            <Link
+              href="/account"
+              className="hidden text-sm text-ink-muted underline-offset-4 transition-colors hover:text-navy-900 hover:underline sm:inline"
+            >
               {user.name}
-            </span>
+            </Link>
             {/* Sign-out as a POST, not a GET link: a GET logout can be triggered
                 by any image tag on any page the user visits. */}
             <form action={logoutAction}>

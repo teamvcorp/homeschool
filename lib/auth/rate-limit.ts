@@ -213,4 +213,17 @@ export const RATE_LIMITS = {
    * permanent cache means each is paid for once ever. If this trips, something is wrong.
    */
   TRANSLATION_GLOBAL_PER_DAY: { limit: 2000, windowSeconds: 24 * 60 * 60 },
+
+  /**
+   * Password-change attempts, per signed-in user.
+   *
+   * The form requires the CURRENT password, which makes it a second place a password can be
+   * guessed — and a more attractive one than the login form, because reaching it means an
+   * attacker already has a session (a borrowed laptop, a shared machine left signed in) and
+   * only needs the password to lock the real owner out permanently.
+   *
+   * Tighter than LOGIN_PER_EMAIL because there is no legitimate reason to get your own
+   * current password wrong ten times, and the cost of being wrong is a short wait.
+   */
+  PASSWORD_CHANGE_PER_USER: { limit: 5, windowSeconds: 15 * 60 },
 } as const;
