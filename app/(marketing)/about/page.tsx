@@ -28,7 +28,7 @@ export default function AboutPage() {
               <h2>How the school began</h2>
               <p>
                 The Von Der Becke Academy Corp was established in{" "}
-                {school.established} in Florida and has been in{school.address.city}, Iowa for the last 6 years. Founded by{" "}
+                {school.established} in Florida and has been in {school.address.city}, Iowa for the last 6 years. Founded by{" "}
                 <strong>{school.headOfSchool}</strong>, a career educator and
                 behavioral specialist whose professional experience dates to
                 2004. The school was founded on the conviction that every student
