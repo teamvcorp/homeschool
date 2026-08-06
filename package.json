@@ -20,6 +20,7 @@
     "check:agreement": "tsx --conditions=react-server scripts/check-agreement-hash.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@node-rs/argon2": "^2.0.2",
     "jose": "^6.2.8",
     "mongodb": "^6.21.0",

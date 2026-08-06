@@ -495,3 +495,37 @@ export interface EmailQueueDoc extends Base {
   /** Links the email back to whatever triggered it. */
   relatedId?: ObjectId | null;
 }
+
+/* ------------------------------- Translations ------------------------------ */
+
+/**
+ * A cached machine translation of PUBLIC page copy.
+ *
+ * WHY THIS COLLECTION EXISTS
+ *
+ * The language lens translates marketing copy on demand. Without a cache, every visitor
+ * who taps a paragraph pays for a fresh model call and the cost scales with traffic. With
+ * one, each distinct paragraph is translated ONCE, EVER, and the steady-state cost of the
+ * whole feature is zero. The cache is not an optimisation here — it is the reason the
+ * feature is affordable at all.
+ *
+ * DELIBERATELY NO TTL. Every other cache-shaped collection in this schema expires
+ * (`rateLimits`, `enrollmentDrafts`); this one must not. Marketing copy is stable, and an
+ * expiry would quietly convert a one-time cost back into a recurring one — the exact
+ * property the design depends on.
+ *
+ * ⚠️  NOTHING PRIVATE IS EVER STORED HERE. Every row is text that already appears on a
+ * public page. The endpoint that writes it is scoped to the marketing routes and refuses
+ * enrollment-agreement text; no student record, no application, and no family submission
+ * can reach this collection.
+ */
+export interface TranslationDoc extends Base {
+  /** sha256(normalisedSourceText + ":" + targetLocale). The unique cache key. */
+  contentHash: string;
+  /** The English source, stored so a bad translation can be traced back to its input. */
+  sourceText: string;
+  targetLocale: Locale;
+  translatedText: string;
+  /** Which model produced it — lets a future model change invalidate selectively. */
+  model: string;
+}

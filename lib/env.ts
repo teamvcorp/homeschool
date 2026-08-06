@@ -99,6 +99,16 @@ const schema = z.object({
   /** Protects the email-retry route handler from public invocation. */
   CRON_SECRET: z.string().min(16).optional(),
 
+  /**
+   * Anthropic API key, for the on-demand translation fallback (/api/translate).
+   *
+   * OPTIONAL, and the feature is built to degrade rather than break when it is absent:
+   * the language lens falls back to the browser's own on-device translator, and where that
+   * is unavailable the reader simply sees the English original. A missing key must never
+   * turn a marketing page into an error — it is a reading aid, not the page.
+   */
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

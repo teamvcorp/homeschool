@@ -1,5 +1,6 @@
 import SiteHeader from "@/app/components/SiteHeader";
 import SiteFooter from "@/app/components/SiteFooter";
+import LanguageLens from "@/app/components/LanguageLens";
 
 /**
  * Chrome for every public marketing page.
@@ -24,10 +25,23 @@ export default function MarketingLayout({
     <>
       <SiteHeader />
       {/* pt-16 clears the fixed header. #main is the skip-link target. */}
+      {/* pt-16 clears the fixed header. #main is BOTH the skip-link target and the root
+          the language lens scans for translatable blocks — see LanguageLens.tsx. */}
       <main id="main" className="flex-1 pt-16">
         {children}
       </main>
       <SiteFooter />
+      {/*
+        The language lens. A client island by necessity: it reads the RENDERED DOM, which
+        is what lets it work without threading a prop through ~25 components — and, more
+        importantly, what keeps these 18 pages statically prerendered, since nothing here
+        reads a cookie on the server.
+
+        It mounts on every marketing route including /enroll (whose layout nests inside
+        this one), and returns null there itself. The funnel has reviewed translations and
+        its agreement must never be machine-translated.
+      */}
+      <LanguageLens />
     </>
   );
 }

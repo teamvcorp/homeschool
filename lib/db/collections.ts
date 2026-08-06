@@ -16,6 +16,7 @@ import type {
   AuditLogDoc,
   RateLimitDoc,
   EmailQueueDoc,
+  TranslationDoc,
 } from "./types";
 
 /**
@@ -43,7 +44,19 @@ export const COLLECTIONS = {
   auditLog: "auditLog",
   rateLimits: "rateLimits",
   emailQueue: "emailQueue",
+  translations: "translations",
 } as const;
+
+/**
+ * Cached machine translations of PUBLIC page copy.
+ *
+ * Deliberately its own collection and deliberately WITHOUT a TTL — see TranslationDoc in
+ * ./types.ts. It holds no student data and nothing a family submitted; every row is public
+ * marketing copy that already appears on the site.
+ */
+export async function translationsCollection(): Promise<Collection<TranslationDoc>> {
+  return (await getDb()).collection<TranslationDoc>(COLLECTIONS.translations);
+}
 
 export async function usersCollection(): Promise<Collection<UserDoc>> {
   return (await getDb()).collection<UserDoc>(COLLECTIONS.users);

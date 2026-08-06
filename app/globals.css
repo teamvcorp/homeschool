@@ -149,6 +149,39 @@ body {
   font-family: var(--font-lao), var(--font-sans);
 }
 
+/* --------------------------------------------------------------------------
+   THE LANGUAGE LENS
+
+   `data-lens-target` is set by app/components/LanguageLens.tsx on every block
+   it can translate, and only while a reading language is switched on. The
+   attribute is absent by default, so none of this costs anything — visually or
+   in bytes — for the overwhelming majority of visitors who never turn it on.
+
+   The affordance is deliberately quiet: a dotted underline in the gold accent,
+   not a button and not a highlight. A page where every paragraph shouts "click
+   me" is worse to read than one with no lens at all, and the people who need
+   this are trying to read, not to hunt for controls.
+   -------------------------------------------------------------------------- */
+[data-lens-target] {
+  cursor: pointer;
+  text-decoration: underline dotted var(--color-gold-400);
+  text-underline-offset: 0.25em;
+  transition: background-color 0.15s ease;
+}
+
+[data-lens-target]:hover,
+[data-lens-target]:focus-visible {
+  background-color: var(--color-gold-100);
+}
+
+/* The revealed translation never prints: it is a reading aid, not part of the
+   document, and it must not appear on a printed accreditation page. */
+@media print {
+  [data-lens-panel] {
+    display: none !important;
+  }
+}
+
 /* Headings default to the serif display face. */
 h1,
 h2,

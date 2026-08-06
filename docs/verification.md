@@ -50,6 +50,7 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | `scripts/e2e/verify-agreement.mjs` | The printable executed agreement renders with its evidence envelope and refuses unauthorized readers. |
 | `scripts/e2e/verify-notifications.mjs` | Family status emails — and the two milestones that must NOT send. Inspects the email queue for template ids and stored locales. |
 | `scripts/e2e/verify-language.mjs` | The language toggle driven with no JavaScript, plus the `returnTo` redirect guard. |
+| `scripts/e2e/verify-translate.mjs` | The language lens endpoint: origin/length/locale guards, the agreement refusal, and the cache. |
 | `scripts/check-agreement-hash.ts` | Pins the agreement's SHA-256 so no change to the signed wording can pass unnoticed. |
 
 ## The database rule
@@ -203,6 +204,28 @@ Each harness also now prints the server's own error text via `serverError()` whe
 submit is refused. If you add a harness that submits, use it — never report a bare
 `status=200`.
 
+## Trap 8 — a limiter that touches the database can take the page down with it
+
+`/api/translate` documents an invariant at the top of the file: *this feature degrades, it
+never fails the page.* The harness caught it breaking that promise on the first real
+outage — an Atlas connection timeout threw straight out of `consumeRateLimit`, past the
+route, and returned a **500 on a marketing page**. Every model call, cache read and cache
+write was carefully wrapped; the rate limiter was not, because a limiter reads like control
+flow rather than I/O.
+
+Both limiters (per-IP in the route, the global spend cap in the service) are now wrapped,
+and both **fail closed**: when the counter cannot be read, the model is not called. The
+global cap is the only control that actually bounds the bill, so spending money without
+being able to count it is the wrong side to fail on. The reader sees the English original.
+
+Two general lessons, and the second is the one that keeps biting:
+
+- Anything that talks to the database is I/O and can fail, including the code that exists
+  to protect you.
+- **An invariant that depends on every callee keeping its own promise is one refactor away
+  from being false.** The route now carries a final `try/catch` backstop even though
+  `translate()` is written never to throw.
+
 ## A finding worth knowing: middle names change the school email
 
 The rule is *first name + day of birth + first letter of last name + 2-digit year*.
@@ -236,7 +259,8 @@ Last full run — all five harnesses green in a single `npm run e2e`, **134 chec
 | `verify-promote` | 24 / 24 |
 | `verify-agreement` | 17 / 17 |
 | `verify-notifications` | 24 / 24 |
-| `verify-language` | 26 / 26 |
+| `verify-language` | 35 / 35 |
+| `verify-translate` | 16 / 16 (1 skipped without `ANTHROPIC_API_KEY`) |
 | typecheck · lint · build | clean; the 18 static marketing pages remain `○` |
 
 **184 checks across 7 harnesses**, green from an emptied database.

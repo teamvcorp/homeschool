@@ -182,4 +182,35 @@ export const RATE_LIMITS = {
   ENROLLMENT_EMAIL_GLOBAL_PER_DAY: { limit: 40, windowSeconds: 24 * 60 * 60 },
 
   INQUIRY_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
+
+  /**
+   * On-demand translation, per IP.
+   *
+   * Sized so that READING never trips it. Someone working through the handbook in Lao may
+   * tap thirty or forty paragraphs in a sitting, and a limiter that cuts them off mid-page
+   * fails exactly the person the feature exists for. 120/hour leaves generous headroom for
+   * genuine reading while still bounding a scripted caller.
+   *
+   * Cache hits are NOT charged against this — only calls that would actually reach the
+   * model. A second visitor reading the same page spends nothing and consumes nothing.
+   */
+  TRANSLATE_PER_IP: { limit: 120, windowSeconds: 60 * 60 },
+
+  /**
+   * GLOBAL daily ceiling on model-backed translations — the spend cap.
+   *
+   * /api/translate is UNAUTHENTICATED and calls a paid API, which makes it a
+   * translation proxy funded by the school unless something bounds the total. Per-IP limits
+   * alone do not: an attacker with a pool of addresses simply spreads the load.
+   *
+   * Modelled on ENROLLMENT_EMAIL_GLOBAL_PER_DAY above, including its most important
+   * property: ON TRIP THE FEATURE DEGRADES, IT DOES NOT ERROR. The endpoint returns the
+   * English original and the page renders normally. A visitor loses a convenience; nobody
+   * loses a page.
+   *
+   * 2000/day is far above real reading volume for a school with a handful of enrolled
+   * families — the whole public site is only a few hundred translatable blocks, and the
+   * permanent cache means each is paid for once ever. If this trips, something is wrong.
+   */
+  TRANSLATION_GLOBAL_PER_DAY: { limit: 2000, windowSeconds: 24 * 60 * 60 },
 } as const;

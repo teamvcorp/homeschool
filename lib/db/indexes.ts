@@ -222,5 +222,21 @@ export async function createIndexes(): Promise<string[]> {
   );
   note("emailQueue.status_nextAttempt");
 
+  // --- translations ---------------------------------------------------------
+  /**
+   * The cache key, and the reason this feature costs a fixed amount rather than a
+   * per-visitor one. UNIQUE so a race between two readers tapping the same paragraph
+   * resolves to one stored row rather than two — the writer uses an upsert keyed on this.
+   *
+   * No TTL: marketing copy is stable, and expiring the cache would silently turn a
+   * one-time cost back into a recurring one.
+   */
+  const translations = db.collection(COLLECTIONS.translations);
+  await translations.createIndex(
+    { contentHash: 1 },
+    { unique: true, name: "contentHash_unique" },
+  );
+  note("translations.contentHash_unique");
+
   return created;
 }
