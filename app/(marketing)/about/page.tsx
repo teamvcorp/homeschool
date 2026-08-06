@@ -18,7 +18,7 @@ export default function AboutPage() {
       <PageHeader
         eyebrow="About the school"
         title="Fourteen years of not lowering the bar"
-        lead={`The Von Der Becke Academy Corp has operated continuously in Buena Vista County since ${school.established}, on one conviction: every student can achieve at the highest level when instruction is individualized and expectations are never reduced.`}
+        lead={`The Von Der Becke Academy Corp has operated continuously in Buena Vista County since 2020, on one conviction: every student can achieve at the highest level when instruction is individualized and expectations are never reduced.`}
       />
 
       <Section>
