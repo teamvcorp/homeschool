@@ -181,6 +181,19 @@ export const es = {
   "funnel.media.noConsent":
     "NO doy mi consentimiento para que se usen fotografías o videos de mi estudiante con fines de promoción",
 
+  /* ------------------------------ language lens ---------------------------- */
+
+  "lens.open": "Traducir",
+  "lens.title": "Leer esta página en",
+  "lens.howTo": "Toque cualquier párrafo para verlo traducido.",
+  "lens.tapHint": "Toque cualquier párrafo para leerlo en español.",
+  "lens.off": "Desactivar",
+  "lens.disclosure":
+    "Las traducciones son automáticas y pueden contener errores. El texto en inglés es el original.",
+  "lens.notice":
+    "Traducción automática — el texto en inglés de arriba es el original.",
+  "lens.unavailable": "La traducción no está disponible en este momento.",
+
   /* --- Indicador de progreso --- */
   "funnel.progress.label": "Progreso de la inscripción",
   "funnel.progress.position": "Paso {current} de {total}",

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { navigation, dailyApp, type NavItem } from "@/lib/site";
 import { WordmarkLink } from "./ui/Crest";
 import { ButtonLink } from "./ui/Button";
+import LanguageLens from "./LanguageLens";
 
 /**
  * Site header. Client Component because it owns two pieces of interactive state:
@@ -186,12 +187,25 @@ export default function SiteHeader() {
               Sign in
             </a>
 
+            {/*
+              The language lens, far right. It began life as a floating button in the
+              bottom-right corner and took the school a minute to find — a translation
+              control that has to be hunted for has already failed the person who needs it.
+            */}
+            <LanguageLens />
+
             <ButtonLink href="/enroll" variant="gold" size="sm" className="ml-1">
               Enroll
             </ButtonLink>
           </div>
 
-          {/* ---------- Mobile trigger ---------- */}
+          {/* ---------- Mobile: lens + drawer trigger ---------- */}
+          <div className="flex items-center gap-1 lg:hidden">
+            {/* Outside the drawer on purpose: a reader who cannot read the navigation
+                should not have to open the navigation to find the translator. */}
+            <LanguageLens />
+          </div>
+
           <button
             type="button"
             onClick={() => setMobileOpen(!mobileOpen)}

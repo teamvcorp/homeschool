@@ -225,8 +225,9 @@ console.log("\n=== LANGUAGE LENS (/api/translate) ===\n");
 {
   const about = await fetch(`${BASE}/about`).then((r) => r.text());
   check(
-    "The lens is present on a marketing page",
-    about.includes("Translate this page") || about.includes("va_lens_lang"),
+    "The lens control is in the header on a marketing page",
+    about.includes('title="Translate"') && about.includes("文A"),
+    "moved out of the floating corner button, which was hard to find",
   );
   /**
    * The disclosure is CONDITIONALLY rendered — once in the chooser (before a reader picks
@@ -245,8 +246,9 @@ console.log("\n=== LANGUAGE LENS (/api/translate) ===\n");
   }
   check(
     "Disclosure ships to the reader: chooser warning",
-    bundles.includes("Translations are automatic"),
-    "shown before a language is chosen",
+    bundles.includes("Translations are automatic") &&
+      bundles.includes("Las traducciones son automáticas"),
+    "and in Spanish too — the chooser speaks the reader's language",
   );
   check(
     "Disclosure ships to the reader: per-translation notice",
@@ -262,8 +264,7 @@ console.log("\n=== LANGUAGE LENS (/api/translate) ===\n");
    */
   check(
     "SECURITY: the lens does not render in the enrollment funnel",
-    !enroll.includes("Translate this page") &&
-      !enroll.includes("Read this page in"),
+    !enroll.includes('title="Translate"') && !enroll.includes("Read this page in"),
     "the funnel has reviewed translations; the agreement is never machine-translated",
   );
 }

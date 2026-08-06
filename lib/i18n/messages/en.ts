@@ -214,6 +214,24 @@ export const en = {
   "funnel.media.noConsent":
     "I do NOT consent to photographs or video of my student for any promotional use",
 
+  /* ------------------------------ language lens ---------------------------- */
+  /*
+   * The lens's OWN copy must appear in the reader's language, not English.
+   * An English instruction explaining how to read the page in Lao is useless to the one
+   * person it exists for. `lens.tapHint` is the exception that proves it: it is shown
+   * beside each language option BEFORE anything is selected, so a reader who cannot read
+   * this sentence still sees one they can.
+   */
+  "lens.open": "Translate",
+  "lens.title": "Read this page in",
+  "lens.howTo": "Tap any paragraph to see it translated.",
+  "lens.tapHint": "Tap any paragraph to read it in English.",
+  "lens.off": "Turn off",
+  "lens.disclosure":
+    "Translations are automatic and may contain mistakes. The English text is the original.",
+  "lens.notice": "Automatic translation — the English above is the original.",
+  "lens.unavailable": "Translation is not available right now.",
+
   /* --- Progress indicator --- */
   "funnel.progress.label": "Enrollment progress",
   "funnel.progress.position": "Step {current} of {total}",
