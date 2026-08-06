@@ -108,7 +108,7 @@ export async function updateStudentAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("updateStudent", async () => {
     const parsed = updateStudentSchema.safeParse({
       studentId: formData.get("studentId"),
       legalName: formData.get("legalName"),
@@ -261,7 +261,7 @@ export async function updateSchoolEmailAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("updateSchoolEmail", async () => {
     // Assigning school identities is an administrator's job, not an instructor's.
     await requireCapability("records:write");
 

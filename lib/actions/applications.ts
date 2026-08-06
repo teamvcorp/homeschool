@@ -61,7 +61,7 @@ export async function transitionApplicationAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("transitionApplication", async () => {
     const user = await requireCapability("applications:decide");
 
     const parsed = transitionSchema.safeParse({
@@ -246,7 +246,7 @@ export async function countersignApplicationAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("countersignApplication", async () => {
     const user = await requireCapability("applications:decide");
 
     const parsed = countersignSchema.safeParse({
@@ -323,7 +323,7 @@ export async function promoteApplicationAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("promoteApplication", async () => {
     const user = await requireCapability("applications:decide");
 
     const parsed = promoteSchema.safeParse({

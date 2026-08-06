@@ -77,7 +77,7 @@ export async function recordAttendanceAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("recordAttendance", async () => {
     const parsed = attendanceSchema.safeParse({
       studentId: formData.get("studentId"),
       date: formData.get("date"),
@@ -147,7 +147,7 @@ export async function recordMasteryAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("recordMastery", async () => {
     const parsed = masterySchema.safeParse({
       studentId: formData.get("studentId"),
       subject: formData.get("subject"),
@@ -216,7 +216,7 @@ export async function recordBehaviorAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("recordBehavior", async () => {
     const parsed = behaviorSchema.safeParse({
       studentId: formData.get("studentId"),
       period: formData.get("period"),
@@ -280,7 +280,7 @@ export async function recordTaekwondoRankAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("recordTaekwondoRank", async () => {
     const parsed = taekwondoSchema.safeParse({
       studentId: formData.get("studentId"),
       rank: formData.get("rank"),

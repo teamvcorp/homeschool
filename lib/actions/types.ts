@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reportError, messageFor, isNextControlFlow } from "../errors";
 
 /**
  * SERVER ACTION RESULT CONTRACT
@@ -62,6 +63,10 @@ export function fromZodError(error: z.ZodError): ActionState<never> {
  * Deliberately generic. A raw error string can leak a connection string, a
  * collection name, or a stack path — and a visitor can do nothing useful with any
  * of it. Real detail goes to the server log.
+ *
+ * NOTE: `guardAction` no longer returns this bare string. It returns the same sentence with a
+ * REFERENCE appended, so the visitor has something to quote on the phone. This constant
+ * remains for callers that need a message without having an error in hand.
  */
 export const GENERIC_ERROR =
   "Something went wrong on our end. Please try again, or call the school if it keeps happening.";
@@ -74,8 +79,20 @@ export const GENERIC_ERROR =
  * exception. Swallowing it here would silently break every redirect, so it is
  * detected and rethrown. Same for Next's notFound(). Call redirect() AFTER this
  * wrapper returns wherever possible.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY `name` IS REQUIRED
+ *
+ * This used to log `[action] unhandled error` with no indication of WHICH action failed.
+ * Twelve actions share this wrapper, so that line told you a form broke somewhere. The name
+ * is the log's primary grouping key and the first thing you need when a parent calls; making
+ * it a required parameter is the only way to guarantee it is never omitted.
+ *
+ * The visitor-facing message now carries a reference that matches the log line — see
+ * lib/errors.ts for why that reference is safe to display.
  */
 export async function guardAction<T>(
+  name: string,
   body: () => Promise<ActionState<T>>,
 ): Promise<ActionState<T>> {
   try {
@@ -83,23 +100,13 @@ export async function guardAction<T>(
   } catch (error) {
     // Next signals redirect/notFound via thrown objects carrying a digest string.
     // Rethrowing preserves that control flow.
-    if (
-      error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      typeof (error as { digest?: unknown }).digest === "string" &&
-      ((error as { digest: string }).digest.startsWith("NEXT_REDIRECT") ||
-        (error as { digest: string }).digest === "NEXT_NOT_FOUND")
-    ) {
-      throw error;
-    }
+    if (isNextControlFlow(error)) throw error;
 
-    // Authorization failures are reported as a flat denial with no detail.
-    if (error instanceof Error && error.name === "AuthorizationError") {
-      return { ok: false, message: "You do not have access to do that." };
-    }
-
-    console.error("[action] unhandled error", error);
-    return { ok: false, message: GENERIC_ERROR };
+    /**
+     * Authorization failures are reported as a flat denial with no detail — and are still
+     * REPORTED, because a burst of them is how an access-control problem or a probe shows up.
+     */
+    const report = reportError(error, { where: `action:${name}` });
+    return { ok: false, message: messageFor(report) };
   }
 }

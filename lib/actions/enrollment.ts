@@ -217,7 +217,7 @@ export async function saveEnrollmentStep(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("saveEnrollmentStep", async () => {
     const step = getStep(slug);
     if (!step?.schema) return failure("That step does not exist.");
 
@@ -315,7 +315,7 @@ export async function submitEnrollmentAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("submitEnrollment", async () => {
     const draftId = await getDraftId();
     if (!draftId) {
       return failure(

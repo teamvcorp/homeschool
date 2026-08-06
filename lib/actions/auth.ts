@@ -52,7 +52,7 @@ export async function loginAction(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return guardAction(async () => {
+  return guardAction("login", async () => {
     const parsed = loginSchema.safeParse({
       email: formData.get("email"),
       password: formData.get("password"),

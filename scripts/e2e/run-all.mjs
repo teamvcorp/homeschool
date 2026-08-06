@@ -21,6 +21,12 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 
 const HARNESSES = [
+  /**
+   * FIRST, and the only harness that needs no running server — it exercises lib/errors.ts
+   * in-process. Placed here deliberately: if PII scrubbing is broken, every harness that runs
+   * after it writes real-looking test data through the logger, so failing fast is the point.
+   */
+  ["verify-errors.mjs", "error reporting: PII scrubbing, classification, and references"],
   ["verify-enroll.mjs", "the enrollment funnel over the no-JS path"],
   ["verify-bugfix.mjs", "the two production bugs: autofill honeypot, sibling carry-over"],
   ["verify-admin.mjs", "admin review flow and every authorization boundary"],
