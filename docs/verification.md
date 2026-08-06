@@ -226,6 +226,38 @@ Two general lessons, and the second is the one that keeps biting:
   from being false.** The route now carries a final `try/catch` backstop even though
   `translate()` is written never to throw.
 
+## Trap 9 — `hidden` controls paint, not mounting
+
+The language lens was placed in the header twice: once inside the desktop nav (`hidden
+lg:flex`) and once beside the mobile trigger (`lg:hidden`). Exactly one is ever *visible*,
+so the header looked right at every width. Both were **mounted**, and the lens reaches
+outside its own subtree — it attaches a delegated `click` listener to `<main>`.
+
+So one click ran two handlers. `reveal()` inserts its panel synchronously and then awaits
+the translation, so the first handler inserted the panel and the second saw a panel already
+there and treated the click as a toggle, removing it. Appear and vanish inside a single
+tick. The report was **"it doesn't recognize the paragraph clicks"** — which sends you
+looking at the listener, the selector, and the scan root, none of which were wrong.
+
+Three things to take from it:
+
+- **A component that touches global state — `document` queries, listeners on shared nodes,
+  timers, `body` classes — must be mounted once and styled responsively.** Never duplicated
+  per breakpoint. Responsive *visibility* is not responsive *mounting*.
+- **A symptom of "nothing happens" can be two things happening.** Idempotence was the
+  missing property, not correctness. `reveal()` now holds a `WeakSet` of in-flight targets
+  so a second dispatch is dropped rather than inverted, and only a deliberate gesture is
+  allowed to close a panel.
+- **Assert on the count, not the presence.** The old check asked "is the control in the
+  header?" and passed throughout, because one *was*. `verify-translate.mjs` now asserts
+  `title="Translate"` appears **exactly once** in the HTML.
+
+The same bug hid a second, unrelated one: `MIN_CHARS = 25` was applied to headings too, and
+this site's headings are short by design — "Who teaches here" is 16, "Four pathways" 13,
+"Funding" 7. Headings were in the selector and filtered out one line later, so *no heading
+on the site had ever been translatable*. Headings now have their own floor of 4. Worth
+remembering that one visible failure can mask another with the same symptom.
+
 ## A finding worth knowing: middle names change the school email
 
 The rule is *first name + day of birth + first letter of last name + 2-digit year*.

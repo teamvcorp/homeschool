@@ -57,11 +57,60 @@ const STORAGE_KEY = "va_lens_lang";
 /**
  * Blocks the lens will translate. Leaf-ish text containers only — a wrapper that contains
  * other blocks would translate its children twice over.
+ *
+ * Table cells are included because DataTable carries real content on these pages (grade
+ * levels, graduation requirements, the ESA figures), not just chrome.
  */
-const BLOCK_SELECTOR = "p, li, h1, h2, h3, h4, dt, dd, blockquote, figcaption";
+const BLOCK_SELECTOR =
+  "p, li, h1, h2, h3, h4, h5, h6, dt, dd, blockquote, figcaption, th, td, summary";
 
-/** Below this, translating adds more clutter than comprehension (labels, "—", counts). */
+/** Headings, which get their own — much lower — length floor. Must be a subset of the above. */
+const HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6, summary, dt, th";
+
+/**
+ * Below this, translating adds more clutter than comprehension (labels, "—", counts).
+ *
+ * ⚠️  HEADINGS NEED THEIR OWN FLOOR, and not having one was a real bug. Headings were in the
+ * selector from the start, but the site's are short by design — "Who teaches here" is 16
+ * characters, "Four pathways" 13, "Funding" 7 — so a flat 25-character floor filtered out
+ * nearly every heading on the site one line after selecting it. The reader's report was
+ * that headings did not respond; they were never eligible.
+ *
+ * A heading is the one thing a lost reader looks at first, so the floor here is only high
+ * enough to skip a bare numeral or initialism.
+ */
 const MIN_CHARS = 25;
+const HEADING_MIN_CHARS = 4;
+
+/**
+ * HOVER, THE PRIMARY GESTURE — and why it cannot be the only one.
+ *
+ * Pointing at a paragraph and having it translate is the magnifying-glass metaphor working
+ * as advertised, so on a mouse it is the primary gesture. But hover does not exist on a
+ * phone and cannot be reached from a keyboard, and the families most likely to need this
+ * are the most likely to be on a phone. So hover is layered ON TOP of tap/click, never in
+ * place of it. Three ways in, one behaviour:
+ *
+ *   hover (mouse only)  → transient panel, disappears when the pointer leaves
+ *   tap / click         → PINNED panel, stays until tapped again
+ *   Enter / Space       → same as click (targets become focusable only while the lens is on)
+ *
+ * DWELL, not instant. Every reveal can cost a model call, and a pointer crossing the page
+ * passes over a dozen paragraphs on its way somewhere else. A short dwell separates
+ * "pointing at this" from "moving past this" and is the main thing standing between hover
+ * and a bill.
+ */
+const HOVER_DWELL_MS = 320;
+
+/**
+ * Grace period before a transient panel is dismissed.
+ *
+ * The panel renders BELOW its paragraph, so the reader's pointer has to LEAVE the paragraph
+ * to read the translation. Dismissing on leave would delete the panel at the exact moment
+ * it started being useful. The handler treats paragraph and panel as one hover region, and
+ * this covers the gap crossed between them.
+ */
+const HOVER_GRACE_MS = 260;
 
 /** Must match MAX_SOURCE_CHARS in lib/translate/service.ts. */
 const MAX_CHARS = 4000;
@@ -195,34 +244,136 @@ export default function LanguageLens() {
       // Leaf-ish only: skip anything that contains another translatable block.
       if (el.querySelector(BLOCK_SELECTOR)) continue;
       const text = el.textContent?.trim() ?? "";
-      if (text.length < MIN_CHARS || text.length > MAX_CHARS) continue;
+      const floor = el.matches(HEADING_SELECTOR) ? HEADING_MIN_CHARS : MIN_CHARS;
+      if (text.length < floor || text.length > MAX_CHARS) continue;
       el.setAttribute("data-lens-target", "");
+      /**
+       * Focusable ONLY while the lens is on. Making every paragraph on the site a tab stop
+       * would be a serious regression for keyboard users, so the tab stops appear only for
+       * the reader who deliberately turned translation on — for whom they are the point —
+       * and the cleanup below takes them away again.
+       */
+      el.tabIndex = 0;
       eligible.push(el);
     }
 
+    const active = locale;
     const strings = {
       notice: tr("lens.notice"),
       unavailable: tr("lens.unavailable"),
     };
 
-    async function onClick(event: MouseEvent) {
+    /** Only a mouse gets hover. Touch and pen fire pointerover on tap, which would double-fire. */
+    const canHover =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+    let dwellTimer: number | undefined;
+    let dismissTimer: number | undefined;
+    let hovered: HTMLElement | null = null;
+
+    /** A click on a link or control inside a paragraph belongs to the link, not the lens. */
+    function isInteractive(node: EventTarget | null): boolean {
+      return Boolean(
+        (node as HTMLElement | null)?.closest("a, button, input, select, textarea, label"),
+      );
+    }
+
+    function onClick(event: MouseEvent) {
       const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
         "[data-lens-target]",
       );
-      if (!target || !locale) return;
-      // Never hijack a click on a link or control inside the paragraph.
-      if ((event.target as HTMLElement | null)?.closest("a, button, input, select, textarea, label"))
-        return;
+      if (!target || isInteractive(event.target)) return;
       event.preventDefault();
-      await reveal(target, locale, strings);
+      // Clicking commits: the panel is pinned and survives the pointer leaving.
+      window.clearTimeout(dismissTimer);
+      void reveal(target, active, strings, "pin");
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        "[data-lens-target]",
+      );
+      if (!target || isInteractive(event.target)) return;
+      event.preventDefault(); // Space would scroll the page.
+      void reveal(target, active, strings, "pin");
+    }
+
+    function onPointerOver(event: PointerEvent) {
+      if (!canHover || event.pointerType !== "mouse") return;
+      const from = event.target as HTMLElement | null;
+      if (!from) return;
+
+      // Inside an open panel: the reader is reading it. Cancel any pending dismissal.
+      if (from.closest("[data-lens-panel]")) {
+        window.clearTimeout(dismissTimer);
+        return;
+      }
+
+      const target = from.closest<HTMLElement>("[data-lens-target]");
+      if (!target) return;
+      // Moving between children of the same paragraph is not a new hover.
+      if (target === hovered) {
+        window.clearTimeout(dismissTimer);
+        return;
+      }
+
+      window.clearTimeout(dwellTimer);
+      window.clearTimeout(dismissTimer);
+      hovered = target;
+      dwellTimer = window.setTimeout(() => {
+        void reveal(target, active, strings, "transient");
+      }, HOVER_DWELL_MS);
+    }
+
+    function onPointerOut(event: PointerEvent) {
+      if (!canHover || event.pointerType !== "mouse") return;
+      const to = event.relatedTarget as HTMLElement | null;
+      /**
+       * Paragraph and panel are ONE hover region. Leaving the paragraph for its own panel
+       * (or for a child of either) is not leaving.
+       */
+      if (to && (to.closest("[data-lens-target]") === hovered || to.closest("[data-lens-panel]")))
+        return;
+
+      window.clearTimeout(dwellTimer);
+      const leaving = hovered;
+      hovered = null;
+      if (!leaving) return;
+
+      dismissTimer = window.setTimeout(() => {
+        const panel = panelFor(leaving);
+        // A pinned panel was asked for deliberately; only hover's own panels are transient.
+        if (panel && !panel.hasAttribute("data-lens-pinned")) panel.remove();
+      }, HOVER_GRACE_MS);
     }
 
     main.addEventListener("click", onClick);
+    main.addEventListener("keydown", onKeyDown);
+    main.addEventListener("pointerover", onPointerOver);
+    main.addEventListener("pointerout", onPointerOut);
+
     return () => {
       main.removeEventListener("click", onClick);
-      for (const el of eligible) el.removeAttribute("data-lens-target");
+      main.removeEventListener("keydown", onKeyDown);
+      main.removeEventListener("pointerover", onPointerOver);
+      main.removeEventListener("pointerout", onPointerOut);
+      window.clearTimeout(dwellTimer);
+      window.clearTimeout(dismissTimer);
+      for (const el of eligible) {
+        el.removeAttribute("data-lens-target");
+        el.removeAttribute("tabindex");
+      }
     };
-  }, [locale, inFunnel, pathname, tr]);
+    /**
+     * `tr` is deliberately NOT a dependency. `translator()` returns a fresh closure on every
+     * render, so depending on it would tear this effect down and rebuild it on every render —
+     * and the cleanup strips `data-lens-target` from every element. `locale` is what actually
+     * changes the strings, and it IS a dependency.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, inFunnel, pathname]);
 
   // Escape closes; so does a click outside. Matches the header's other dropdowns.
   useEffect(() => {
@@ -351,13 +502,70 @@ export default function LanguageLens() {
  * place would make the original unrecoverable and would quietly present machine output as
  * the school's own words.
  */
+/** The panel belonging to a target, if one is open. */
+function panelFor(target: HTMLElement): HTMLElement | null {
+  const next = target.nextElementSibling;
+  return next instanceof HTMLElement && next.hasAttribute("data-lens-panel") ? next : null;
+}
+
+/**
+ * Targets with a reveal in flight.
+ *
+ * ⚠️  THE GUARD THAT MAKES DOUBLE-DISPATCH HARMLESS. `reveal` inserts its panel
+ * synchronously and then awaits the translation, so two handlers firing for one gesture
+ * used to read as: first inserts the panel, second sees a panel and toggles it away. The
+ * panel appeared and vanished inside one tick, which is indistinguishable from the click
+ * not registering at all — and that is exactly the bug a duplicated mount produced.
+ *
+ * The duplicate mount is fixed at its source in SiteHeader.tsx. This is the belt to that
+ * braces, and it also covers the ordinary cases: hover's dwell firing as a click lands, or
+ * a browser synthesising a click after a tap.
+ */
+const revealing = new WeakSet<HTMLElement>();
+
+/**
+ * Translations already fetched this page view, keyed by locale + source.
+ *
+ * The server cache makes a repeat translation free in money; this makes it free in latency
+ * too, so re-hovering a paragraph is instant rather than a round trip. Bounded, because an
+ * unbounded Map on a long reading session is a leak.
+ */
+const memo = new Map<string, string | null>();
+const MEMO_LIMIT = 200;
+
+async function translateMemoized(source: string, locale: Locale): Promise<string | null> {
+  const key = `${locale} ${source}`;
+  const hit = memo.get(key);
+  if (hit !== undefined) return hit;
+
+  const result = await translateText(source, locale);
+  if (memo.size >= MEMO_LIMIT) {
+    const oldest = memo.keys().next();
+    if (!oldest.done) memo.delete(oldest.value);
+  }
+  memo.set(key, result);
+  return result;
+}
+
+/**
+ * `pin` — the reader asked for this (tap, click, Enter). Toggles, and survives the pointer
+ *          moving away.
+ * `transient` — hover. Never toggles anything off, and is dismissed when the pointer leaves.
+ */
+type RevealMode = "pin" | "transient";
+
 async function reveal(
   target: HTMLElement,
   locale: Locale,
   strings: { notice: string; unavailable: string },
+  mode: RevealMode,
 ): Promise<void> {
-  const existing = target.nextElementSibling;
-  if (existing instanceof HTMLElement && existing.hasAttribute("data-lens-panel")) {
+  if (revealing.has(target)) return;
+
+  const existing = panelFor(target);
+  if (existing) {
+    // Hover must never close a panel — only the deliberate gesture toggles.
+    if (mode === "transient") return;
     existing.remove();
     return;
   }
@@ -368,6 +576,7 @@ async function reveal(
   const panel = document.createElement("div");
   panel.setAttribute("data-lens-panel", "");
   panel.setAttribute("data-no-translate", "");
+  if (mode === "pin") panel.setAttribute("data-lens-pinned", "");
   panel.lang = locale;
   panel.className =
     "my-2 rounded-lg border border-line border-l-4 border-l-gold-400 bg-surface-muted px-4 py-3";
@@ -378,7 +587,21 @@ async function reveal(
   panel.appendChild(loading);
   target.insertAdjacentElement("afterend", panel);
 
-  const result = await translateText(source, locale);
+  revealing.add(target);
+  let result: string | null;
+  try {
+    result = await translateMemoized(source, locale);
+  } finally {
+    // Released even if the fetch throws, or the paragraph is dead to the lens forever.
+    revealing.delete(target);
+  }
+
+  /**
+   * The panel can be gone by now: hover's grace timer, a second click, or a navigation
+   * between the request going out and coming back. Writing into a detached node would be
+   * harmless but pointless — and re-attaching it would resurrect a panel the reader dismissed.
+   */
+  if (!panel.isConnected) return;
 
   const body = document.createElement("p");
   body.lang = locale;

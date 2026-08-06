@@ -224,7 +224,7 @@ export const en = {
    */
   "lens.open": "Translate",
   "lens.title": "Read this page in",
-  "lens.howTo": "Tap any paragraph to see it translated.",
+  "lens.howTo": "Point at or tap any paragraph to see it translated.",
   "lens.tapHint": "Tap any paragraph to read it in English.",
   "lens.off": "Turn off",
   "lens.disclosure":

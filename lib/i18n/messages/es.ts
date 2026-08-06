@@ -185,7 +185,7 @@ export const es = {
 
   "lens.open": "Traducir",
   "lens.title": "Leer esta página en",
-  "lens.howTo": "Toque cualquier párrafo para verlo traducido.",
+  "lens.howTo": "Señale o toque cualquier párrafo para verlo traducido.",
   "lens.tapHint": "Toque cualquier párrafo para leerlo en español.",
   "lens.off": "Desactivar",
   "lens.disclosure":

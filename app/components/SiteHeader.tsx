@@ -187,57 +187,65 @@ export default function SiteHeader() {
               Sign in
             </a>
 
-            {/*
-              The language lens, far right. It began life as a floating button in the
-              bottom-right corner and took the school a minute to find — a translation
-              control that has to be hunted for has already failed the person who needs it.
-            */}
-            <LanguageLens />
-
             <ButtonLink href="/enroll" variant="gold" size="sm" className="ml-1">
               Enroll
             </ButtonLink>
           </div>
 
-          {/* ---------- Mobile: lens + drawer trigger ---------- */}
-          <div className="flex items-center gap-1 lg:hidden">
-            {/* Outside the drawer on purpose: a reader who cannot read the navigation
-                should not have to open the navigation to find the translator. */}
-            <LanguageLens />
-          </div>
+          {/* ---------- Far right: the language lens, then the mobile drawer trigger ----------
 
-          <button
-            type="button"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-menu"
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            className="rounded-lg p-2 text-navy-800 transition-colors hover:bg-navy-50 lg:hidden"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
+              ⚠️  EXACTLY ONE <LanguageLens /> MAY BE MOUNTED PER PAGE, and this is it.
+
+              The first attempt rendered one inside the desktop nav and another beside the
+              mobile trigger, hiding each with a breakpoint class. Both still MOUNTED, both
+              attached a click listener to <main>, and a single click therefore ran two
+              handlers: the first inserted the translation panel, the second saw a panel
+              already there and treated the click as a toggle, removing it. The panel
+              appeared and vanished within one tick — indistinguishable from "clicking a
+              paragraph does nothing".
+
+              `hidden`/`lg:flex` control PAINT, not mounting. A component that reaches
+              outside its own subtree — global listeners, document queries — must be
+              mounted once and styled responsively, never duplicated per breakpoint.
+
+              It also sits outside the drawer deliberately: a reader who cannot read the
+              navigation should not have to open the navigation to find the translator. */}
+          <div className="flex items-center gap-1">
+            <LanguageLens />
+
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              className="rounded-lg p-2 text-navy-800 transition-colors hover:bg-navy-50 lg:hidden"
             >
-              {mobileOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                {mobileOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
       </nav>
 

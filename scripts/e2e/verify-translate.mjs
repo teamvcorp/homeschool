@@ -230,6 +230,26 @@ console.log("\n=== LANGUAGE LENS (/api/translate) ===\n");
     "moved out of the floating corner button, which was hard to find",
   );
   /**
+   * REGRESSION GUARD — this exact bug shipped once.
+   *
+   * The header briefly rendered one lens inside the desktop nav and another beside the
+   * mobile trigger, each hidden at the other breakpoint. `hidden`/`lg:flex` control PAINT,
+   * not MOUNTING, so both were live and both attached a click listener to <main>. One click
+   * ran two handlers: the first inserted the translation panel, the second saw a panel
+   * already there and toggled it away. The panel appeared and vanished inside a single tick,
+   * which presents as "clicking a paragraph does nothing" — and the visible-control count
+   * looked correct the whole time, because only one was ever painted.
+   *
+   * Counting MOUNTS in the HTML is what distinguishes the two, which is why this asserts a
+   * number and not a boolean.
+   */
+  const mounted = (about.match(/title="Translate"/g) ?? []).length;
+  check(
+    "REGRESSION: exactly ONE lens control is mounted, not one per breakpoint",
+    mounted === 1,
+    `found ${mounted} — two mounts means two listeners on <main>, which cancel each other out`,
+  );
+  /**
    * The disclosure is CONDITIONALLY rendered — once in the chooser (before a reader picks
    * a language) and once on every revealed translation (as they read it). Neither is in
    * the initial HTML, so asserting on the page body would be asserting the wrong thing.
