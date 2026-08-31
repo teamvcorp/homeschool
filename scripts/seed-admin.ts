@@ -20,6 +20,11 @@
  * /account now exists (app/(secure)/account), but it is a place to change the password,
  * not a gate. If forcing it matters, that needs a `mustChangePassword` field on UserDoc
  * and a redirect in the authenticated pages — deliberately not built yet.
+ *
+ * LOSING THIS PASSWORD IS NO LONGER FATAL. "Forgot your password?" on /login emails a
+ * one-hour, single-use link (lib/actions/password-reset.ts). Before that existed, the
+ * only recovery was editing the database by hand — which is exactly how this script came
+ * to be the sole way an administrator could exist at all.
  */
 
 import { randomBytes } from "node:crypto";
@@ -71,7 +76,9 @@ async function main() {
       `\nA user with email ${email} already exists (role: ${existing.role}).`,
     );
     console.error(
-      "Refusing to overwrite. To reset a password, use the admin UI or delete the user first.\n",
+      "Refusing to overwrite. To reset this account's password, use the\n" +
+        '"Forgot your password?" link on /login — it emails a one-hour, single-use\n' +
+        "link and requires no database access.\n",
     );
     process.exit(1);
   }

@@ -87,6 +87,20 @@ export const es = {
   "email.questions.calls":
     "¿Preguntas? Llame al {phone} o simplemente responda a este correo.",
 
+  /* ---------------------------- account emails ----------------------------- */
+
+  "email.reset.subject": "Restablezca su contraseña de {schoolName}",
+  "email.reset.heading": "Elija una contraseña nueva",
+  "email.reset.body1":
+    "Hemos recibido una solicitud para restablecer la contraseña de esta dirección de correo. Use el botón de abajo para elegir una nueva.",
+  "email.reset.button": "Establecer una contraseña nueva",
+  "email.reset.expiry":
+    "Este enlace deja de funcionar en una hora y solo se puede usar una vez.",
+  "email.reset.ignore":
+    "Si usted no solicitó esto, puede ignorar este mensaje — no ha cambiado nada y su contraseña actual sigue funcionando.",
+  "email.reset.fallback":
+    "Si el botón no funciona, copie y pegue este enlace en su navegador:",
+
   /* ------------------------- language toggle (UI) -------------------------- */
 
   "language.label": "Idioma",

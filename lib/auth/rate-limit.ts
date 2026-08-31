@@ -226,4 +226,35 @@ export const RATE_LIMITS = {
    * current password wrong ten times, and the cost of being wrong is a short wait.
    */
   PASSWORD_CHANGE_PER_USER: { limit: 5, windowSeconds: 15 * 60 },
+
+  /**
+   * "Forgot my password" requests, per email address.
+   *
+   * TIGHT — 3 an hour — because this endpoint SENDS MAIL TO AN ADDRESS A STRANGER TYPED.
+   * That makes it the same kind of relay as the enrollment form: the abuse to worry
+   * about is not compute, it is pointing school-branded mail at a victim's inbox, and
+   * the cost of that is the sending reputation of fyht4.com, which also carries every
+   * enrollment confirmation.
+   *
+   * Three is comfortably more than a real person needs (the usual second attempt is
+   * "did it arrive yet?"), and a genuine fourth try can wait an hour or call the school.
+   */
+  PASSWORD_RESET_REQUEST_PER_EMAIL: { limit: 3, windowSeconds: 60 * 60 },
+
+  /**
+   * The same requests, per IP. Looser, because a family behind one NAT — or a school
+   * office — must not lock each other out, and the per-email cap above is what actually
+   * protects any individual inbox.
+   */
+  PASSWORD_RESET_REQUEST_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
+
+  /**
+   * Attempts to REDEEM a reset or setup link, per IP.
+   *
+   * Not really a guess-prevention measure — a 256-bit token is not being brute forced in
+   * 15-minute windows — but it bounds someone hammering the redemption endpoint with
+   * junk, each attempt of which costs a hash and an indexed lookup. Keyed by IP because
+   * there is no account identity until the token resolves.
+   */
+  PASSWORD_RESET_CONFIRM_PER_IP: { limit: 10, windowSeconds: 15 * 60 },
 } as const;

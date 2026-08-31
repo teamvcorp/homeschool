@@ -271,6 +271,25 @@ export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
 export const EMAIL_STATUSES = ["queued", "sent", "failed"] as const;
 export type EmailStatus = (typeof EMAIL_STATUSES)[number];
 
+/* --------------------------------- Tokens ---------------------------------- */
+
+/**
+ * What an emailed token is allowed to do. The purpose is checked at redemption, so a
+ * token minted for one job cannot be replayed at another endpoint.
+ *
+ *  - "reset"  — chose a new password from a "forgot password" request. One hour.
+ *  - "setup"  — the same, for an account created FOR someone (a guardian at acceptance)
+ *               who has never had a password. Seven days, because it arrives unprompted
+ *               and a family may not read their mail that day.
+ *  - "resume" — return to an unfinished enrollment draft. Bound to a draft, not a user.
+ *
+ * "reset" and "setup" deliberately share a redemption screen: both end in "pick a
+ * password", and splitting them would mean two forms doing identical work with
+ * identical security requirements.
+ */
+export const TOKEN_PURPOSES = ["reset", "setup", "resume"] as const;
+export type TokenPurpose = (typeof TOKEN_PURPOSES)[number];
+
 /* ---------------------------------- Audit ---------------------------------- */
 
 /**
@@ -316,5 +335,25 @@ export const AUDIT_ACTIONS = [
    * this entry is also the explanation for every other device being signed out.
    */
   "auth.passwordChanged",
+  /**
+   * Someone asked for a password-reset link.
+   *
+   * `actorId` is null — the request is unauthenticated by definition, and the address
+   * typed into the form is not proof of anything. The email goes in `meta` for the same
+   * reason `auth.loginFailed` records it: a burst against one address is the signal.
+   *
+   * NOTE that this entry is written whether or not the address matched an account. The
+   * form's response cannot distinguish the two without becoming an enumeration oracle,
+   * and neither can this log without becoming one for anybody who can read it.
+   */
+  "auth.passwordResetRequested",
+  /**
+   * A password was actually set from an emailed link. Here `actorId` IS known, because
+   * redeeming the token is what identified them.
+   *
+   * The counterpart to the entry above: a request with no completion is an abandoned
+   * link or a bounced email, and the pair is what tells those apart.
+   */
+  "auth.passwordResetCompleted",
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

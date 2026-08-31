@@ -37,6 +37,8 @@ Source of record: `VA_School_Complete_Document_Package.pdf` (Iowa DE submission)
 | `auditLog` | Doc 6 §6.1 | Append-only access trail |
 | `rateLimits` | — | Abuse counters (TTL) |
 | `emailQueue` | — | Failed-send retry |
+| `authTokens` | — | Emailed capability links — reset / setup / resume (TTL) |
+| `translations` | — | Cached machine translations of public copy (deliberately no TTL) |
 
 ## The critical boundary: applications ≠ students
 
@@ -73,9 +75,24 @@ TTL indexes:
   a half-entered medical history should not sit in the database forever.
 - `rateLimits.expiresAt` — `expireAfterSeconds: 0`, i.e. delete when the timestamp
   passes. This is what replaces Redis.
+- `authTokens.expiresAt` — `expireAfterSeconds: 0`. **Cleanup only, never the expiry
+  check.** Mongo's TTL monitor runs about once a minute, so a token can outlive its
+  own `expiresAt` briefly; `lib/auth/token.ts` compares the date in code and refuses
+  regardless. Treating the index as the boundary would be a real, if narrow, hole.
 
 Also note `users.email_unique` uses `collation: { locale: "en", strength: 2 }` so
 `Bob@x.com` and `bob@x.com` cannot coexist (emails are also lowercased on write).
+
+### `authTokens` holds no usable token
+
+Only `sha256(token)` is stored, and `tokenHash` is the *only* way to find a row —
+there is deliberately no index making "list this user's live links" cheap. The raw
+value exists in the emailed link and nowhere else, so a leaked backup or an
+over-broad Atlas role yields a table of hashes and no way into any account. This is
+the same rule as `users.passwordHash`, for the same reason.
+
+Redeemed rows are kept rather than deleted (`usedAt` set) so a second click can be
+told the link is spent, and so the audit trail has a subject to point at.
 
 ## Enrollment agreement field map (Document 9)
 

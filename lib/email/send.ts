@@ -36,6 +36,27 @@ export interface SendEmailInput {
   /** Links the queued email back to whatever triggered it. */
   relatedId?: ObjectId | null;
   replyTo?: string;
+  /**
+   * Suppresses the retry queue for this message. On failure it is logged and dropped.
+   *
+   * ⚠️  THIS DELIBERATELY BREAKS RULE 1 ABOVE, and there is exactly one class of message
+   * that warrants it: one whose body contains a LIVE CREDENTIAL.
+   *
+   * A password-reset link is a bearer token. Queuing it writes that token into
+   * `emailQueue.data` in plain text — precisely what storing only `tokenHash` exists to
+   * prevent (see AuthTokenDoc). A leaked backup would hand over working reset links for
+   * every message that happened to be waiting.
+   *
+   * The retry would also usually be pointless: a reset token lives one hour and the
+   * drainer's backoff is 5, 20, 45, 80 minutes, so most retries would deliver a link that
+   * is already dead — which reads to the recipient as the system being broken.
+   *
+   * Nothing is lost by dropping it. The reset form cannot report a send failure anyway
+   * (that would confirm the address exists), so the user sees the same message either
+   * way and simply asks again — which mints a fresh token. The flow is self-healing in a
+   * way an enrollment submission is not, which is why the rule holds there and not here.
+   */
+  doNotPersist?: boolean;
 }
 
 export type SendResult =
@@ -128,6 +149,18 @@ async function queueForRetry(
   error: string,
   delayMs = 5 * 60 * 1000,
 ): Promise<void> {
+  /**
+   * The credential-carrying opt-out. See `doNotPersist` on SendEmailInput for why one
+   * class of message must never reach this collection. Logged so a run of failures is
+   * still visible in the console even though nothing is stored.
+   */
+  if (input.doNotPersist) {
+    console.error(
+      `[email] dropped (not queued — carries a credential) "${input.subject}" for ${redact(input.to)} — ${error.slice(0, 200)}`,
+    );
+    return;
+  }
+
   try {
     const queue = await emailQueueCollection();
     const now = new Date();

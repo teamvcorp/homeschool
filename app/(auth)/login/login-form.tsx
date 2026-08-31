@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction } from "@/lib/actions/auth";
@@ -100,6 +101,15 @@ export default function LoginForm() {
       </div>
 
       <SubmitButton />
+
+      {/* Without this link the reset flow may as well not exist. Someone who cannot sign
+          in is on THIS page, and they will not guess a URL. */}
+      <Link
+        href="/forgot-password"
+        className="text-center text-sm font-semibold text-navy-700 underline hover:text-navy-900"
+      >
+        Forgot your password?
+      </Link>
     </form>
   );
 }

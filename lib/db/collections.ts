@@ -17,6 +17,7 @@ import type {
   RateLimitDoc,
   EmailQueueDoc,
   TranslationDoc,
+  AuthTokenDoc,
 } from "./types";
 
 /**
@@ -45,6 +46,7 @@ export const COLLECTIONS = {
   rateLimits: "rateLimits",
   emailQueue: "emailQueue",
   translations: "translations",
+  authTokens: "authTokens",
 } as const;
 
 /**
@@ -124,4 +126,13 @@ export async function rateLimitsCollection(): Promise<Collection<RateLimitDoc>> 
 
 export async function emailQueueCollection(): Promise<Collection<EmailQueueDoc>> {
   return (await getDb()).collection<EmailQueueDoc>(COLLECTIONS.emailQueue);
+}
+
+/**
+ * Emailed password-reset, account-setup, and enrollment-resume tokens.
+ *
+ * Holds only hashes and expiries — never a usable token. See AuthTokenDoc in ./types.ts.
+ */
+export async function authTokensCollection(): Promise<Collection<AuthTokenDoc>> {
+  return (await getDb()).collection<AuthTokenDoc>(COLLECTIONS.authTokens);
 }

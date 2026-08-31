@@ -13,10 +13,11 @@
     "db:ping": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/db-ping.ts",
     "seed:admin": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-admin.ts",
     "check:email": "tsx --conditions=react-server scripts/check-school-email.ts",
+    "check:reset-email": "tsx --conditions=react-server scripts/check-reset-email.ts",
     "e2e": "node scripts/e2e/run-all.mjs",
     "seed:test-fixtures": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/seed-test-fixtures.ts",
     "db:reset-test": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/reset-test-db.ts",
-    "dev:test": "node -e \"process.env.MONGODB_DB='va_school_test';require('child_process').spawn(process.platform==='win32'?'npx.cmd':'npx',['next','dev'],{stdio:'inherit',env:process.env})\"",
+    "dev:test": "node -e \"process.env.MONGODB_DB='va_school_test';require('child_process').spawn(process.execPath,[require.resolve('next/dist/bin/next'),'dev'],{stdio:'inherit',env:process.env})\"",
     "check:agreement": "tsx --conditions=react-server scripts/check-agreement-hash.ts"
   },
   "dependencies": {

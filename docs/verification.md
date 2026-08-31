@@ -20,7 +20,8 @@ npm run seed:test-fixtures -- --clear-rate-limits
 
 # Terminal 2
 npm run check:email                          # no server or database needed
-E2E_ADMIN_PASSWORD='...' npm run e2e         # all five harnesses
+npm run check:reset-email                    # likewise
+E2E_ADMIN_PASSWORD='...' npm run e2e         # every harness
 ```
 
 Individual harnesses run standalone — each seeds its own fixtures:
@@ -43,6 +44,7 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | Script | Proves |
 |---|---|
 | `scripts/check-school-email.ts` | The school email rule, with no database. Edge cases a worked example leaves open. |
+| `scripts/check-reset-email.ts` | The reset email renders in all three locales, carries the link in **both** HTML and plain text, declares the right `lang`, leaks no raw message key, and escapes a URL containing markup. No database, no server. |
 | `scripts/e2e/verify-enroll.mjs` | The eight-step funnel, all 8 acknowledgments enforced, honeypot, minimum fill time, signature intent, no student name on the confirmation page. |
 | `scripts/e2e/verify-bugfix.mjs` | The two bugs reported from production: autofill-triggered honeypot rejection, and sibling carry-over. Includes what must NOT carry over. |
 | `scripts/e2e/verify-admin.mjs` | Application review, the status machine, countersignature, promotion, all four record templates, and every authorization boundary including cross-family scope. |
@@ -51,6 +53,7 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | `scripts/e2e/verify-notifications.mjs` | Family status emails — and the two milestones that must NOT send. Inspects the email queue for template ids and stored locales. |
 | `scripts/e2e/verify-language.mjs` | The language toggle driven with no JavaScript, plus the `returnTo` redirect guard. |
 | `scripts/e2e/verify-translate.mjs` | The language lens endpoint: origin/length/locale guards, the agreement refusal, and the cache. |
+| `scripts/e2e/verify-password-reset.mjs` | Reset and change-password: enumeration resistance asserted by string equality, single-use / expiring / purpose-bound tokens, and the `sessionEpoch` bump that evicts sessions created before the reset. |
 | `scripts/check-agreement-hash.ts` | Pins the agreement's SHA-256 so no change to the signed wording can pass unnoticed. |
 
 ## The database rule
@@ -164,6 +167,32 @@ did both: it looked for `$ACTION_1:0` and reconstructed it as
 wizard form to `$ACTION_2` and every step broke at once. Discover the index from
 `$ACTION_REF_(\d+)`, echo the values verbatim, and skip forms belonging to other actions
 (the toggle is identifiable by its `returnTo` field).
+
+## Trap 8 — `npm run dev:test` and `spawn EINVAL` on Windows
+
+Symptom, with nothing else in the output:
+
+```
+Error: spawn EINVAL
+  errno: -4071, code: 'EINVAL', syscall: 'spawn'
+```
+
+Node 18.20.2 / 20.12.2 / 22 hardened `child_process.spawn` (CVE-2024-27980) so it
+refuses to launch `.bat` and `.cmd` files without `shell: true`. `dev:test` spawned
+`npx.cmd`, so it broke on Windows the moment Node was updated — and the error names
+neither npx nor Next, which is why it reads like a corrupted install.
+
+The fix was **not** `shell: true`, which would hand the arguments to `cmd.exe`. It
+spawns Next's JavaScript entry point directly with the current Node binary:
+
+```js
+spawn(process.execPath, [require.resolve("next/dist/bin/next"), "dev"], …)
+```
+
+No `.cmd`, no shell, and it behaves identically on macOS and Linux.
+
+If you hit this in another script, look for `npx`/`.cmd` in a `spawn` call before
+suspecting anything else.
 
 ## Trap 7 — "does not leave the site" is not the same as "is safe"
 
@@ -284,6 +313,7 @@ Last full run — all five harnesses green in a single `npm run e2e`, **134 chec
 | Suite | Result |
 |---|---|
 | `check:email` | 17 / 17 |
+| `check:reset-email` | 23 / 23 |
 | `check:agreement` | pinned at `2308d0e0…` |
 | `verify-enroll` | 20 / 20 |
 | `verify-bugfix` | 28 / 28 |
@@ -293,9 +323,10 @@ Last full run — all five harnesses green in a single `npm run e2e`, **134 chec
 | `verify-notifications` | 24 / 24 |
 | `verify-language` | 35 / 35 |
 | `verify-translate` | 16 / 16 (1 skipped without `ANTHROPIC_API_KEY`) |
+| `verify-password-reset` | 28 / 28 |
 | typecheck · lint · build | clean; the 18 static marketing pages remain `○` |
 
-**184 checks across 7 harnesses**, green from an emptied database.
+**212 checks across 8 harnesses**, green from an emptied database.
 
 The build's `○` / `ƒ` column is a real assertion, not decoration: the language cookie is
 read in `app/(marketing)/enroll/layout.tsx` rather than the root layout precisely so the

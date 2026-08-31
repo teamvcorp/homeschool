@@ -447,3 +447,73 @@ export function enrollmentWelcomeEmail(input: {
 
   return { subject: tr("email.welcome.subject", vars), html, text };
 }
+
+/* ========================================================================== */
+/*  ACCOUNT ACCESS                                                            */
+/* ========================================================================== */
+
+/**
+ * The password-reset link.
+ *
+ * UNLIKE EVERY OTHER TEMPLATE HERE, this one is not about a student and does not go only
+ * to a family — an administrator locked out of the records system gets exactly this
+ * message. So it names no student, and it takes no student data at all.
+ *
+ * WHAT IT MUST NOT CONTAIN, and why each matters:
+ *
+ *  - A PASSWORD. Not a generated one, not a temporary one. A password in an inbox is a
+ *    password in every backup of that inbox, forever. The whole point of the token flow is
+ *    that the only person who ever knows the new password is the person who types it.
+ *  - THE ACCOUNT HOLDER'S NAME. Tempting, and wrong: reset mail sometimes reaches a
+ *    mistyped address, and a name would tell that stranger whose account it is. The
+ *    address it arrived at is identity enough for the person who asked.
+ *
+ * The raw URL is repeated as text beneath the button on purpose. Buttons are a table and
+ * an anchor, and some mail clients — and most plain-text readers — will not render them
+ * usefully. A reset link that cannot be clicked must still be a reset link.
+ */
+export function passwordResetEmail(input: {
+  resetUrl: string;
+  locale?: Locale;
+}): { subject: string; html: string; text: string } {
+  const locale = input.locale ?? "en";
+  const tr = translator(locale);
+  const vars = { schoolName: school.dbaName };
+
+  const html = layout(
+    tr("email.reset.heading"),
+    [
+      p(esc(tr("email.reset.body1"))),
+      emailButton(input.resetUrl, tr("email.reset.button")),
+      p(esc(tr("email.reset.expiry"))),
+      p(esc(tr("email.reset.ignore"))),
+      `<p style="margin:18px 0 6px;font-size:13px;line-height:1.6;color:${MUTED};">${esc(tr("email.reset.fallback"))}</p>`,
+      /**
+       * `word-break` because a 43-character base64url token in a narrow mobile column
+       * otherwise forces horizontal scroll or gets visually truncated — and a truncated
+       * link that LOOKS complete is worse than an obviously broken one.
+       */
+      `<p style="margin:0 0 14px;font-size:12px;line-height:1.5;color:${MUTED};word-break:break-all;">${esc(input.resetUrl)}</p>`,
+      questionsParagraph(tr),
+    ].join(""),
+    locale,
+  );
+
+  const text = [
+    tr("email.reset.heading"),
+    ``,
+    tr("email.reset.body1"),
+    ``,
+    input.resetUrl,
+    ``,
+    tr("email.reset.expiry"),
+    ``,
+    tr("email.reset.ignore"),
+    ``,
+    tr("email.questions.calls", { phone: school.phone }),
+    ``,
+    school.legalName,
+  ].join("\n");
+
+  return { subject: tr("email.reset.subject", vars), html, text };
+}

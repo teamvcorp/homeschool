@@ -3,12 +3,12 @@
 import { z } from "zod";
 import { ObjectId } from "mongodb";
 import { usersCollection } from "../db/collections";
+import { hashPassword, verifyPassword, MAX_PASSWORD_LENGTH } from "../auth/password";
 import {
-  hashPassword,
-  verifyPassword,
-  MIN_PASSWORD_LENGTH,
-  MAX_PASSWORD_LENGTH,
-} from "../auth/password";
+  newPasswordShape,
+  confirmationMatches,
+  CONFIRMATION_MISMATCH,
+} from "../validation/password";
 import { signSession, setSessionCookie } from "../auth/session";
 import { consumeRateLimit, resetRateLimit, hashIdentifier, RATE_LIMITS } from "../auth/rate-limit";
 import { verifySession } from "../dal";
@@ -49,25 +49,20 @@ import { type ActionState, guardAction, failure, success, fromZodError } from ".
  * teaches people not to do it.
  */
 
+/**
+ * The length and confirmation rules live in lib/validation/password.ts, shared with the
+ * reset-from-email flow — see that file for why they must not drift apart. Only the
+ * current-password field and the "must actually be a change" rule are specific here.
+ */
 const changePasswordSchema = z
   .object({
+    ...newPasswordShape,
     currentPassword: z
       .string()
       .min(1, "Enter your current password")
       .max(MAX_PASSWORD_LENGTH),
-    newPassword: z
-      .string()
-      .min(
-        MIN_PASSWORD_LENGTH,
-        `Use at least ${MIN_PASSWORD_LENGTH} characters. A short phrase you can remember is stronger than a short password you cannot.`,
-      )
-      .max(MAX_PASSWORD_LENGTH, "Password is too long"),
-    confirmPassword: z.string().min(1, "Re-type the new password"),
   })
-  .refine((v) => v.newPassword === v.confirmPassword, {
-    message: "The two new passwords do not match",
-    path: ["confirmPassword"],
-  })
+  .refine(confirmationMatches, CONFIRMATION_MISMATCH)
   .refine((v) => v.newPassword !== v.currentPassword, {
     message: "The new password must be different from the current one",
     path: ["newPassword"],

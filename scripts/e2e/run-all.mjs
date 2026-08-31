@@ -35,6 +35,13 @@ const HARNESSES = [
   ["verify-notifications.mjs", "family status emails, and the two that must NOT send"],
   ["verify-language.mjs", "the language toggle with no JavaScript, and its redirect guard"],
   ["verify-translate.mjs", "the language lens endpoint: guards, cache, and the agreement refusal"],
+  /**
+   * LAST, because it deliberately exhausts the per-email reset limit to prove a throttled
+   * caller is indistinguishable from an unknown one. That counter is keyed to its own
+   * throwaway fixture address, so it cannot affect another harness — but the ordering
+   * makes the intent obvious to whoever reads this next.
+   */
+  ["verify-password-reset.mjs", "password reset: no enumeration, single-use tokens, session revocation"],
 ];
 
 function run(file) {

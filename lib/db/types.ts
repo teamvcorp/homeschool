@@ -476,6 +476,57 @@ export interface RateLimitDoc {
   firstAttemptAt: Date;
 }
 
+/* ------------------------------- Auth tokens ------------------------------- */
+
+/**
+ * What a token is for, and what it points at. A discriminated union rather than three
+ * optional fields, so it is impossible to store a "reset" token with no user or a
+ * "resume" token with no draft — the compiler rejects it at every insert site.
+ */
+export type AuthTokenSubject =
+  | { purpose: "reset" | "setup"; userId: ObjectId; draftId?: never }
+  | { purpose: "resume"; draftId: string; userId?: never };
+
+/**
+ * A single-use, time-limited capability delivered by email.
+ *
+ * ONLY THE HASH IS STORED. `tokenHash` is sha256 of the raw token; the raw value exists
+ * in the emailed link and nowhere else, including here. This is the same rule as
+ * `UserDoc.passwordHash` and it exists for the same reason: a database read — a leaked
+ * backup, an over-broad Atlas role, a support engineer with a shell — must not hand
+ * anyone a working way into an account.
+ *
+ * WHY NOT A STATELESS SIGNED TOKEN. lib/forms/hmac.ts already signs values with
+ * FORM_HMAC_SECRET and needs no collection at all, which makes it tempting. It is the
+ * wrong tool twice over: a stateless token cannot be marked used or revoked (so a
+ * forwarded link stays live for its whole window, and a completed reset cannot close
+ * the door behind it), and FORM_HMAC_SECRET is deliberately the LOW-VALUE secret —
+ * lib/env.ts states it must never be able to mint a session, which is exactly what a
+ * password-reset token does at one remove.
+ */
+export type AuthTokenDoc = Base &
+  AuthTokenSubject & {
+    /** sha256(raw token), hex. Unique index — the lookup key. */
+    tokenHash: string;
+    /**
+     * TTL index watches this, AND it is compared in code at redemption.
+     *
+     * Both, deliberately. Mongo's TTL monitor only runs about once a minute, so an
+     * expired token can outlive its expiry by up to that long. The index is cleanup;
+     * the explicit check is the security boundary. `consumeRateLimit` carries the same
+     * belt-and-braces for the same reason.
+     */
+    expiresAt: Date;
+    /**
+     * Set when redeemed. The row is KEPT rather than deleted so a second click gets
+     * "this link has already been used" instead of a bare failure, and so the audit
+     * trail has something to point at.
+     */
+    usedAt?: Date | null;
+    /** Evidence only, never an authorization input. See lib/audit.ts getClientIp. */
+    requestedIp?: string;
+  };
+
 /* ------------------------------- Email queue ------------------------------- */
 
 /**

@@ -238,5 +238,46 @@ export async function createIndexes(): Promise<string[]> {
   );
   note("translations.contentHash_unique");
 
+  // --- authTokens -----------------------------------------------------------
+  /**
+   * The ONLY way to find a token row is by the hash of the token itself. There is
+   * deliberately no index that would make "list this user's live tokens" cheap from
+   * the outside — the emailed value is the capability, and nothing else should be.
+   *
+   * UNIQUE both as a correctness guard and because a collision would mean two
+   * subjects sharing one link.
+   */
+  const authTokens = db.collection(COLLECTIONS.authTokens);
+  await authTokens.createIndex(
+    { tokenHash: 1 },
+    { unique: true, name: "tokenHash_unique" },
+  );
+  note("authTokens.tokenHash_unique");
+  /**
+   * Cleanup, NOT the expiry check. Mongo's TTL monitor runs about once a minute, so a
+   * token can outlive `expiresAt` briefly; lib/auth/token.ts compares the date itself
+   * and refuses regardless. Without this index the collection would grow forever.
+   */
+  await authTokens.createIndex(
+    { expiresAt: 1 },
+    { expireAfterSeconds: 0, name: "expiresAt_ttl" },
+  );
+  note("authTokens.expiresAt_ttl");
+  /**
+   * Supports superseding: issuing a new token invalidates that subject's outstanding
+   * ones, so a forwarded or intercepted earlier link stops working the moment the real
+   * owner asks again. Sparse on each field since a row carries userId XOR draftId.
+   */
+  await authTokens.createIndex(
+    { userId: 1, purpose: 1 },
+    { name: "user_purpose", sparse: true },
+  );
+  note("authTokens.user_purpose");
+  await authTokens.createIndex(
+    { draftId: 1, purpose: 1 },
+    { name: "draft_purpose", sparse: true },
+  );
+  note("authTokens.draft_purpose");
+
   return created;
 }

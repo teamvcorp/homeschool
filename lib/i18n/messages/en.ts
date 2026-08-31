@@ -116,6 +116,44 @@ export const en = {
   "email.questions.calls":
     "Questions? Call {phone} or simply reply to this email.",
 
+  /* ---------------------------- account emails ----------------------------- */
+
+  /**
+   * The password-reset link.
+   *
+   * Goes to ANY role — an administrator, an instructor, or a parent — so the wording
+   * names no student and assumes nothing about who is reading.
+   *
+   * Three things this must do, in order of how often they matter:
+   *  1. Say plainly that nothing has changed yet, so a recipient who did NOT ask can
+   *     close the tab and stop worrying. Most unexpected reset mail is a mistyped
+   *     address, not an attack.
+   *  2. State the expiry, so "the link didn't work" is self-diagnosing.
+   *  3. Offer the raw URL as text. Some mail clients mangle buttons, and a link that
+   *     cannot be clicked must still be usable.
+   *
+   * It must NEVER contain a password, and it deliberately does not name the account
+   * holder — the address it was sent to is the only identity it needs, and a name would
+   * confirm to a wrong recipient whose account it is.
+   */
+  /**
+   * The em-dash form is deliberate. `{schoolName}` is "The VA School", so the natural
+   * phrasing "Reset your {schoolName} password" renders as "Reset your The VA School
+   * password". Naming the school still matters — it is what tells a recipient the mail
+   * is not phishing — so the name goes after the sentence rather than inside it.
+   */
+  "email.reset.subject": "Reset your password — {schoolName}",
+  "email.reset.heading": "Choose a new password",
+  "email.reset.body1":
+    "We received a request to reset the password for this email address. Use the button below to choose a new one.",
+  "email.reset.button": "Set a new password",
+  "email.reset.expiry":
+    "This link stops working in one hour, and can only be used once.",
+  "email.reset.ignore":
+    "If you did not ask for this, you can ignore this email — nothing has changed and your current password still works.",
+  "email.reset.fallback":
+    "If the button does not work, copy and paste this link into your browser:",
+
   /* ------------------------- language toggle (UI) -------------------------- */
 
   "language.label": "Language",

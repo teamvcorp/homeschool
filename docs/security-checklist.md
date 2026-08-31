@@ -12,7 +12,18 @@ This system holds **minors' medical and behavioral records**. Treat it according
 - [x] **Revocable stateless sessions** via `sessionEpoch`.
 - [x] **httpOnly / SameSite=Lax / Secure-in-production** session cookie, 8-hour life.
 - [x] **Account-enumeration defences**: one error message for all auth failures, plus
-      decoy-hash timing equalisation on the unknown-email path.
+      decoy-hash timing equalisation on the unknown-email path. The reset form is the
+      sharper case — it takes an address from an anonymous caller — so it returns an
+      identical response for known, unknown, deactivated *and rate-limited* addresses.
+      Note the deliberate inconsistency with `/login`, which states a lockout plainly:
+      there the attacker already knows they made the attempts, whereas a per-email
+      limit only trips for an address someone is targeting, so admitting it would
+      confirm the address is worth targeting.
+- [x] **No credential is ever emailed.** Not a generated password, not a temporary
+      one. Access arrives only as a time-limited, single-use link whose raw value is
+      stored nowhere — including the retry queue, which reset mail deliberately opts
+      out of via `doNotPersist` (`lib/email/send.ts`) so a failed send cannot park a
+      working token in the database.
 - [x] **Rate limiting** per email and per IP, MongoDB TTL-backed (no Redis).
 - [x] **No open redirect** — no `?next=` parameter; login routes by role.
 - [x] **Sign-out is a POST**, not a GET link.
@@ -55,7 +66,10 @@ This system holds **minors' medical and behavioral records**. Treat it according
       encryption at rest, turn on backups.
 - [ ] **Verify `NEXT_PUBLIC_SITE_URL`** is the real production origin — it feeds
       `allowedOrigins`, canonical URLs, and email links.
-- [ ] **Password reset flow** (currently admin-mediated only).
+- [x] **Password reset flow** — `/forgot-password` → emailed one-hour, single-use,
+      hash-at-rest token → `/reset-password`. Bumps `sessionEpoch`, so a reset also
+      evicts an attacker's live session. Responds identically for known, unknown and
+      throttled addresses. See `docs/auth-model.md` for the full property table.
 - [ ] Consider MFA for the `admin` role.
 - [ ] Decide audit-log retention and access (who may read it, for how long).
 

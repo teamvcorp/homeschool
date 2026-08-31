@@ -130,6 +130,45 @@ The password is *generated*, not passed as an argument — an argument lands in 
 history and process listings. It is printed once and stored only as an Argon2id
 hash.
 
+Losing it is no longer fatal: **"Forgot your password?" on `/login`** emails a
+one-hour link. Before that existed, the only recovery was editing the database by
+hand, which is how this script came to be the sole way an administrator could exist.
+
+## Password reset
+
+`lib/auth/token.ts` + `lib/actions/password-reset.ts`. One token mechanism, three
+purposes (`reset`, `setup`, `resume`) discriminated on the stored row.
+
+**Only `sha256(token)` is stored.** The raw value exists in the emailed link and
+nowhere else — not in `authTokens`, and not in `emailQueue` either, because reset
+mail is sent with `doNotPersist` so a failed send is dropped rather than parked with
+a live credential inside it. A database read yields a table of hashes and no way into
+any account. Same rule as `passwordHash`, same reason.
+
+Why not the stateless HMAC in `lib/forms/hmac.ts`, which needs no collection: a
+stateless token cannot be marked used or revoked, and `FORM_HMAC_SECRET` is
+deliberately the low-value secret that must never be able to mint a session — which
+is exactly what a reset token does at one remove.
+
+Why sha256 and not Argon2: these are 32 CSPRNG bytes, not a human-chosen password.
+There is nothing to brute-force, so stretching would only slow every redemption.
+
+**The properties that make it safe, each with a test behind it:**
+
+| Property | Why |
+|---|---|
+| Identical response for known, unknown, and throttled addresses | This form takes an address from an anonymous stranger. Any variation is an account-enumeration oracle — easier than the login form, since it needs no password guess. Note this is why a rate-limit trip is *silent* here while `/login` says so plainly. |
+| Single use, atomically | `findOneAndUpdate` with `usedAt: null` in the filter. A read-then-write would let a double-clicked link redeem twice. |
+| `expiresAt` checked in code, not only by TTL | Mongo's TTL monitor runs about once a minute, so the index is cleanup and the explicit compare is the boundary. |
+| Purpose-bound | A `resume` token must not open the password screen. |
+| Issuing supersedes outstanding tokens | "Send me another" is also a revocation — an earlier link sitting in a forwarded thread stops working. |
+| A weak or mistyped password does **not** burn the token | Validation runs before redemption. Otherwise the commonest mistake on the screen would send someone back to their inbox. |
+| `sessionEpoch` bumped in the same write as the hash | Resetting is what you do when you fear the account is compromised. If the attacker's session survived, the fix would be theatre. |
+| No session issued on success | Possession of an emailed link is weaker evidence than typing a password, which is why `/account` re-issues a cookie and this does not. |
+
+The landing page only *peeks* at the token; redemption happens on POST. That is what
+makes a link-preview bot fetching the URL harmless.
+
 ## Argon2id parameters
 
 19 MiB memory, 2 passes, 1 lane (OWASP baseline). Cost parameters are encoded into
@@ -151,13 +190,29 @@ reading those under `isolatedModules` (which Next enables).
 | **Garbage token** | **307 → `/login`** |
 | Successful login | Per-email rate-limit counter cleared |
 | No-JS form submission | Works — real `<form>` + server action |
+| Reset request: known vs unknown address | **Byte-identical response**, asserted by string equality |
+| Reset request: throttled caller | Same identical response — no "too many attempts" tell |
+| Reset: tampered / expired / reused / wrong-purpose token | All four refused, and refused *identically* |
+| Reset: mistyped confirmation | Token **not** consumed — the link still works |
+| Reset completed | Session established beforehand → 307 `/login`; `sessionEpoch` 1 → 2 |
+| Reset completed | Old password rejected, new password accepted, **no cookie issued** |
+| Reset: unissued token POSTed directly to the action | Refused — the landing-page check is only a courtesy |
+
+`scripts/e2e/verify-password-reset.mjs`, 28 checks. It mints its own tokens because
+by design it cannot read one: only the hash is stored, and the mail is never queued.
 
 ## Still to do
 
 - [ ] Force password change on first sign-in for seeded accounts
 - [ ] Content-Security-Policy (see `docs/security-checklist.md`)
-- [ ] Password change / reset flow
-- [ ] Admin UI for creating instructor and parent accounts
+- [x] Password change (`/account`) and reset (`/forgot-password`) — see above
+- [ ] Admin UI for creating instructor and parent accounts.
+      **Parent accounts are not merely missing a UI: no production code path creates
+      one at all.** `role: "parent"` is written in exactly one file in the repo,
+      `scripts/seed-test-fixtures.ts`, which refuses any database but
+      `va_school_test`, and `UserDoc.studentIds` is declared, indexed, and read in six
+      places while never being written. So `/portal` — which works, and scopes
+      correctly — is unreachable for every real family.
 
 ## Verification results
 

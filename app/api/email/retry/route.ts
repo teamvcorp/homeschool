@@ -104,6 +104,24 @@ function rerender(template: string, data: Record<string, unknown>) {
         schoolEmail: s("schoolEmail"),
         locale: coerceLocale(data.locale),
       });
+
+    /**
+     * ⚠️  THERE IS DELIBERATELY NO `passwordReset` CASE, AND ADDING ONE WOULD BE A BUG.
+     *
+     * Reset mail is sent with `doNotPersist` (lib/email/send.ts), so it never reaches
+     * this queue and there is nothing here to re-render. That is not an oversight to be
+     * tidied up: re-rendering a reset link requires the raw token, which would mean
+     * storing a WORKING CREDENTIAL in `emailQueue.data` — exactly what keeping only
+     * sha256(token) in `authTokens` exists to prevent.
+     *
+     * The retry would also usually be useless. A reset token lives one hour and the
+     * backoff below is 5, 20, 45, 80 minutes, so most retries would deliver an already
+     * dead link — which reads to the recipient as the system being broken.
+     *
+     * Nothing is lost by dropping a failed send. The reset form cannot report a failure
+     * anyway (that would confirm the address exists), so the user simply asks again and
+     * gets a fresh token. See lib/actions/password-reset.ts.
+     */
     default:
       return null;
   }
