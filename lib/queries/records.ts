@@ -7,9 +7,16 @@ import {
   masteryCollection,
   behaviorCollection,
   taekwondoCollection,
+  inquiriesCollection,
 } from "../db/collections";
 import { attendancePolicy } from "../site";
-import { APPLICATION_STATUSES, type ApplicationStatus, type AttendanceCode } from "../db/enums";
+import {
+  APPLICATION_STATUSES,
+  INQUIRY_STATUSES,
+  type ApplicationStatus,
+  type AttendanceCode,
+  type InquiryStatus,
+} from "../db/enums";
 
 /**
  * READ HELPERS
@@ -48,6 +55,44 @@ export function parseApplicationStatus(
     (APPLICATION_STATUSES as readonly string[]).includes(value)
     ? (value as ApplicationStatus)
     : undefined;
+}
+
+/* -------------------------------- Inquiries -------------------------------- */
+
+/**
+ * Inquiries, newest first, optionally filtered by status.
+ *
+ * Sorted on `createdAt` rather than a submission timestamp because `InquiryDoc` has no
+ * separate submitted-at field — and `{ status, createdAt }` is exactly the existing index
+ * (lib/db/indexes.ts), so the default "new, newest first" view is covered without adding
+ * one.
+ *
+ * Same contract as every helper here: NO authorization is performed. The caller checks
+ * first. See app/(secure)/admin/inquiries/page.tsx for the gate and why it is admin-only.
+ */
+export async function listInquiries(status?: InquiryStatus) {
+  const inquiries = await inquiriesCollection();
+  return inquiries
+    .find(status ? { status } : {}, { sort: { createdAt: -1 }, limit: 200 })
+    .toArray();
+}
+
+/** Narrows an untrusted query-string value to a real inquiry status, or undefined. */
+export function parseInquiryStatus(value: unknown): InquiryStatus | undefined {
+  return typeof value === "string" &&
+    (INQUIRY_STATUSES as readonly string[]).includes(value)
+    ? (value as InquiryStatus)
+    : undefined;
+}
+
+export async function countInquiriesByStatus(): Promise<Record<string, number>> {
+  const inquiries = await inquiriesCollection();
+  const rows = await inquiries
+    .aggregate<{ _id: string; count: number }>([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ])
+    .toArray();
+  return Object.fromEntries(rows.map((r) => [r._id, r.count]));
 }
 
 export async function countApplicationsByStatus(): Promise<Record<string, number>> {

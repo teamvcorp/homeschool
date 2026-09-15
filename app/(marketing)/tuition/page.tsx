@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { school, tuition } from "@/lib/site";
+import { school, tuition, homeschoolAtHome } from "@/lib/site";
 import { PageHeader, Prose } from "@/app/components/ui/PageHeader";
 import { Section, SectionHeading } from "@/app/components/ui/Section";
 import { DataTable } from "@/app/components/ui/Table";
 import { Callout } from "@/app/components/ui/Callout";
-import { ExternalButtonLink } from "@/app/components/ui/Button";
+import { ButtonLink, ExternalButtonLink } from "@/app/components/ui/Button";
 import { CTABand } from "@/app/components/ui/CTABand";
 
 /** Source: accreditation package Document 4 §4.3 — Tuition & Fees. */
@@ -76,6 +76,31 @@ export default function TuitionPage() {
               ],
             ]}
           />
+        </div>
+      </Section>
+
+      {/* Homeschool at Home cross-link.
+
+          ⚠️  DELIBERATELY ITS OWN SUBORDINATE SECTION, NOT A THIRD CARD IN THE HEADLINE
+          GRID ABOVE. Making that grid `lg:grid-cols-3` would shrink the $200 and ESA
+          display numbers and visually equate a $20 support SERVICE with accredited-school
+          tuition governed by Document 4 §4.3. The placement is the message: a family
+          reading about enrollment costs must learn the cheaper option exists, without the
+          page implying the two are the same kind of thing. */}
+      <Section tone="muted">
+        <div className="max-w-3xl">
+          <Callout title="Not ready to enroll yet?">
+            <p>
+              {homeschoolAtHome.summary} {homeschoolAtHome.monthlyFeeLabel}, with
+              Taekwondo at the dojo for families close enough to attend.
+            </p>
+            <p className="mt-3">{homeschoolAtHome.esaNote}</p>
+            <p className="mt-4">
+              <ButtonLink href="/homeschool" variant="outline" size="sm">
+                See Homeschool at Home
+              </ButtonLink>
+            </p>
+          </Callout>
         </div>
       </Section>
 

@@ -260,8 +260,36 @@ export const INQUIRY_TYPES = [
   "instructor",
   "volunteer",
   "employerPartnership",
+  /**
+   * The $20/month support tier — see `homeschoolAtHome` in lib/site.ts.
+   *
+   * NOT an enrollment. A row with this type means a family who homeschools
+   * independently wants to buy curriculum, teacher support, and grading help. Nothing
+   * downstream may promote it into `students` or `enrollmentApplications`.
+   */
+  "homeschoolAtHome",
 ] as const;
 export type InquiryType = (typeof INQUIRY_TYPES)[number];
+
+/**
+ * Human-readable labels for the enum values.
+ *
+ * ⚠️  THIS EXISTS BECAUSE inquiryNotificationEmail() TYPES `type` AS `string` AND
+ * RENDERS IT RAW into the subject line and heading (lib/email/templates.ts). Passing
+ * the enum value straight through puts "New homeschoolAtHome enquiry" in the Head of
+ * School's inbox.
+ *
+ * So: store the ENUM VALUE on the document, and send the LABEL in the email — including
+ * in the queued `data`, so /api/email/retry re-renders a retried message identically.
+ */
+export const INQUIRY_TYPE_LABELS: Record<InquiryType, string> = {
+  tour: "tour",
+  general: "general",
+  instructor: "instructor",
+  volunteer: "volunteer",
+  employerPartnership: "employer partnership",
+  homeschoolAtHome: "Homeschool at Home",
+};
 
 export const INQUIRY_STATUSES = ["new", "contacted", "closed"] as const;
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];

@@ -83,22 +83,42 @@ export default async function AdminDashboardPage() {
             {
               label: "Open inquiries",
               value: openInquiries,
-              hint: "Tours, volunteers, partnerships",
+              hint: "Tours, volunteers, Homeschool at Home",
+              /* Until /admin/inquiries existed this number could only climb — nothing
+                 could read a row, let alone move it off "new". */
+              href: "/admin/inquiries" as const,
             },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl border border-line bg-white p-6"
-            >
-              <dt className="text-xs font-bold uppercase tracking-[0.12em] text-ink-subtle">
-                {stat.label}
-              </dt>
-              <dd className="mt-2 font-serif text-4xl font-bold text-navy-900">
-                {stat.value}
-              </dd>
-              <p className="mt-1 text-sm text-ink-subtle">{stat.hint}</p>
-            </div>
-          ))}
+          ].map((stat) => {
+            const body = (
+              <>
+                <dt className="text-xs font-bold uppercase tracking-[0.12em] text-ink-subtle">
+                  {stat.label}
+                </dt>
+                <dd className="mt-2 font-serif text-4xl font-bold text-navy-900">
+                  {stat.value}
+                </dd>
+                <p className="mt-1 text-sm text-ink-subtle">{stat.hint}</p>
+              </>
+            );
+            // A tile with somewhere to go becomes a link; the others stay plain, so the
+            // affordance matches what actually happens on click.
+            return stat.href ? (
+              <Link
+                key={stat.label}
+                href={stat.href}
+                className="rounded-2xl border border-line bg-white p-6 transition-shadow hover:shadow-lg"
+              >
+                {body}
+              </Link>
+            ) : (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-line bg-white p-6"
+              >
+                {body}
+              </div>
+            );
+          })}
         </dl>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">

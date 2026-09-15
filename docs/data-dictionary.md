@@ -33,12 +33,37 @@ Source of record: `VA_School_Complete_Document_Package.pdf` (Iowa DE submission)
 | `taekwondoRanks` | Doc 6 Template D | Belt progression |
 | `instructors` | Doc 5 §5.3 | Instructor log + compliance |
 | `partnerships` | Doc 8 | Employer MOUs |
-| `inquiries` | Doc 4, Doc 5 | Tour / volunteer / partnership enquiries |
+| `inquiries` | Doc 4, Doc 5, **plus Homeschool at Home (no source doc)** | Tour / volunteer / partnership enquiries, and Homeschool at Home sign-ups |
 | `auditLog` | Doc 6 §6.1 | Append-only access trail |
 | `rateLimits` | — | Abuse counters (TTL) |
 | `emailQueue` | — | Failed-send retry |
 | `authTokens` | — | Emailed capability links — reset / setup / resume (TTL) |
 | `translations` | — | Cached machine translations of public copy (deliberately no TTL) |
+
+### `inquiries` has a producer now
+
+Until Homeschool at Home, nothing in this codebase ever wrote an inquiry — `/contact` was
+a set of `mailto:` links, and the collection, its `status_createdAt` index, the
+`inquiryNotificationEmail` template, and the `/api/email/retry` handler were all built with
+no caller. `lib/actions/inquiry.ts` is the first.
+
+A `type: "homeschoolAtHome"` row is a **sales lead, not an application**. The family is an
+independent homeschooler under Iowa CPI; the school is not their school of record. Nothing
+may promote such a row into `students` or `enrollmentApplications`.
+
+Tier data rides in `details` (the document's "type-specific extras" field), so the schema
+did not change: `childCount`, `gradeLevels`, `nearestTown`, `taekwondoInterest`,
+`currentSituation`, `monthlyEstimate`, `acknowledgedIndependentStatus`, `source`.
+
+- `nearestTown` exists **only** to judge whether the family can reach the dojo for
+  in-person Taekwondo. It is a town, never a street address — this is a public
+  unauthenticated endpoint.
+- `monthlyEstimate` is precomputed (`childCount × 20`) because a human invoices from this
+  record, and making them re-derive it is how the wrong number gets billed.
+- **No medical data, ever.** A non-enrolled child training at the dojo does need a waiver,
+  an emergency contact, and allergy information — collected **in person at the first
+  visit**, deliberately not through this form. `MedicalInfo` stays confined to the
+  enrollment record for the reasons in the conventions above.
 
 ## The critical boundary: applications ≠ students
 

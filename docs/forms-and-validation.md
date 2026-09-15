@@ -45,6 +45,17 @@ So the checks are deliberately asymmetric:
 | Submit — *attempt* | ✓ | ✓ | ✓ | **yes (2s)** | 30/hr per IP |
 | Submit — *stored application* | — | — | — | — | 10/hr per IP, 8/day per email |
 | Outbound enrollment email | — | — | — | — | 40/day globally (never rejects a family) |
+| Homeschool at Home interest | ✓ | ✓ | ✓ | **no** | 10/hr per IP, 5/day per email |
+
+The interest form (`lib/actions/inquiry.ts`) skips the fill-time floor for the same reason
+a wizard step does: it opens with name, email and phone — the exact autofill-prone shape
+of the 2026-08-05 incident — and nothing gates it, so there is no review page to read and
+no legal name to type. A two-second submit there is a family with autofill, not a script.
+
+Its per-email cap is 5/day rather than the enrollment path's 8 because this form is
+per-**family** (one submission covers every child) where the enrollment submit is
+per-**student**. Both caps are charged after schema validation, so a forgotten checkbox
+costs nothing.
 
 **Never enable `enforceMinFillTime` on a step save.** A family accepting a browser autofill
 dropdown and clicking Save can legitimately do it in under two seconds. The floor is safe on
@@ -98,6 +109,34 @@ runtime logs for `[anti-abuse]`:
 | `enroll-start rate limit hit (implicit, step save)` | Draft-creation cap via a cookieless step POST |
 | `no client IP on <scope>` | Proxy is not setting `x-forwarded-for`; limiting has degraded to one shared bucket |
 | `ENROLLMENT EMAIL BREAKER TRIPPED` | Daily global send cap reached. Applications still save; emails are queued |
+
+## `timestamp stale` on a page nobody left open — a page that must not be prerendered
+
+**A public form cannot live on a prerendered page.** `issueFormTimestamp()` mints the
+HMAC-signed token *at render time*, and a prerendered page is rendered **once, at build**.
+
+Two separate failures follow, and the first one is silent:
+
+1. **Twelve hours after every deploy, every submission fails.** The baked-in token outlives
+   `MAX_FORM_AGE_MS` (12h) and every visitor is told the form "was left open for a while
+   and has expired". The page looks perfect. The only evidence is
+   `[anti-abuse] timestamp stale on <scope>`.
+2. **The build itself fails.** Signing needs `FORM_HMAC_SECRET`, and `lib/env.ts` throws on
+   a missing secret — but `npm run build` must pass with `.env.local` absent (see
+   `verification.md`). Prerendering evaluates the mint at build time and dies with
+   `Error occurred prerendering page /homeschool`.
+
+**`export const revalidate` does NOT fix either problem.** ISR still renders the first copy
+at build, so the build still fails; and a page with no traffic is never revalidated, so the
+stale copy is exactly what the next visitor gets. The fix is:
+
+```ts
+export const dynamic = "force-dynamic";
+```
+
+The enrollment wizard never hit this because reading the draft cookie already makes
+`/enroll/[step]` dynamic. `/homeschool` is the first form on a *marketing* page, which has
+no such accident to save it. Any future one needs the same line.
 
 ## `timestamp forged` — the secret is the other suspect
 

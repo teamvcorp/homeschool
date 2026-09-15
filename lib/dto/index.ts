@@ -6,6 +6,7 @@ import type {
   MasteryLogDoc,
   BehaviorRecordDoc,
   TaekwondoRankDoc,
+  InquiryDoc,
 } from "../db/types";
 import type { AuthenticatedUser } from "../dal";
 import type { Locale } from "../i18n/locales";
@@ -75,6 +76,58 @@ export function toApplicationListItem(
     submittedAt: doc.submittedAt.toISOString(),
     emailStatus: doc.emailStatus,
     promoted: Boolean(doc.promotedStudentId),
+  };
+}
+
+/* -------------------------------- Inquiries -------------------------------- */
+
+export interface InquiryListItem {
+  id: string;
+  type: string;
+  typeLabel: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string;
+  details: Record<string, string>;
+  status: string;
+  createdAt: string;
+  emailStatus: string;
+}
+
+/**
+ * List row for the inquiry inbox.
+ *
+ * `details` is passed through whole, which is a deliberate exception to the "a DTO never
+ * contains a field the view does not render" rule — and it is safe only because of what
+ * `details` is allowed to hold. It is free-form `Record<string, string>` written by
+ * `lib/actions/inquiry.ts`, which puts a child count, grade levels, a TOWN, a Taekwondo
+ * preference, and a precomputed monthly figure in it.
+ *
+ * ⚠️  IF A FUTURE INQUIRY PRODUCER EVER PUTS SOMETHING SENSITIVE IN `details`, THIS
+ * PASS-THROUGH BECOMES A LEAK. Nothing medical, no street address, and no date of birth
+ * belongs there — see the `inquiries` notes in docs/data-dictionary.md. Keep it that way,
+ * or whitelist the keys here instead.
+ *
+ * `submissionIp` is deliberately NOT carried through: it is abuse-investigation data, not
+ * something an inbox screen needs on display.
+ */
+export function toInquiryListItem(
+  doc: InquiryDoc,
+  typeLabel: string,
+): InquiryListItem {
+  return {
+    id: id(doc._id),
+    type: doc.type,
+    typeLabel,
+    name: doc.name,
+    email: doc.email,
+    phone: doc.phone ?? null,
+    message: doc.message,
+    details: doc.details ?? {},
+    status: doc.status,
+    createdAt: doc.createdAt.toISOString(),
+    emailStatus: doc.emailStatus,
   };
 }
 

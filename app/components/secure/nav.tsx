@@ -12,6 +12,7 @@ export const ADMIN_NAV: readonly { label: string; href: Route }[] = [
   { label: "Overview", href: "/admin" },
   { label: "Applications", href: "/admin/applications" },
   { label: "Students", href: "/admin/students" },
+  { label: "Inquiries", href: "/admin/inquiries" },
 ];
 
 export const PORTAL_NAV: readonly { label: string; href: Route }[] = [

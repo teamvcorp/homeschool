@@ -181,7 +181,35 @@ export const RATE_LIMITS = {
    */
   ENROLLMENT_EMAIL_GLOBAL_PER_DAY: { limit: 40, windowSeconds: 24 * 60 * 60 },
 
+  /**
+   * The public enquiry forms, per IP. FINALLY IN USE — this was dead config from the day
+   * it was written until the Homeschool at Home interest form became the first thing in
+   * this codebase that actually WRITES an inquiry. (Until then /contact was a set of
+   * mailto: links, and this constant protected nothing.)
+   *
+   * 10/hour is generous on purpose. At this school's volume a genuine burst is a family
+   * submitting twice because they were not sure the first one went through, plus a second
+   * family behind the same rural NAT or library connection. It is also the cap that a
+   * shared "unknown IP" bucket would apply to every visitor at once if a proxy were
+   * misconfigured (see consumeFormRateLimit), which is a second reason not to run it tight.
+   */
   INQUIRY_PER_IP: { limit: 10, windowSeconds: 60 * 60 },
+
+  /**
+   * The public enquiry forms, per email address, per day.
+   *
+   * A different job from the per-IP cap: it bounds one person driving the school's inbox
+   * from rotating IPs.
+   *
+   * 5/day rather than the enrollment path's 8. That number exists to clear a large family
+   * enrolling every child in one sitting, which is a per-STUDENT action. This form is
+   * per-FAMILY — one submission covers every child — so a second and third attempt are a
+   * correction or a follow-up, and a fifth is a phone call.
+   *
+   * Charged only AFTER the schema passes, so a forgotten checkbox costs nothing, and keyed
+   * on the schema-lowercased address so "Jane@" and "jane@" cannot buy two buckets.
+   */
+  INQUIRY_PER_EMAIL: { limit: 5, windowSeconds: 24 * 60 * 60 },
 
   /**
    * On-demand translation, per IP.

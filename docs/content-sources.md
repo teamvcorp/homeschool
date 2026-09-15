@@ -20,7 +20,8 @@ and the accreditation packet render from it, so they cannot disagree.
 | `/staff` | Doc 5 | Head of School (§5.1), instructor requirements (§5.2), instructor log (§5.3), recruitment |
 | `/higher-institute` | Doc 7 | Premise, eligibility (§7.2), two-year framework (§7.3), four pathways (§7.4), dual enrollment (§7.5), completion (§7.6) |
 | `/admissions` | Doc 4 §4.2 | Who we serve, four-step process, non-discrimination, cohort placement |
-| `/tuition` | Doc 4 §4.3 | $200/month, Iowa ESA explainer, hardship |
+| `/tuition` | Doc 4 §4.3 | $200/month, Iowa ESA explainer, hardship, cross-link to `/homeschool` |
+| `/homeschool` | **No source document — deliberately outside the packet** | Homeschool at Home, the $20/month support tier. See below. |
 | `/contact` | Doc 4 §4.1 | Address, phone, email, ways to get in touch |
 | `/enroll` | Doc 9 | Enrollment entry point (**interim** — Phase 4 replaces the body with the wizard) |
 | `/accreditation` | All | Packet index |
@@ -63,6 +64,31 @@ school's own documentation.
 | Four Programs: Robotics, AI & Programming, Mechanics, Micro Societies | Core academic subjects first, then enrichment | The old framing advertised enrichment as the whole curriculum, understating the academic scope |
 | "Transparency" section | Folded into `/about` and `/accreditation` | The strongest transparency claim is publishing the actual submission |
 | `EnrollLink` → external Taekwondo membership page | `/enroll` | Enrollment is the school's own process, not a redirect to a dojo signup |
+
+### `/homeschool` is not a revival of "Homeschool+"
+
+Read this before deciding the Homeschool at Home tier is a regression of the cleanup
+above and reverting it. It is not the same thing, and the difference is the whole point:
+
+|  | "Homeschool+" (removed) | Homeschool at Home (current) |
+|---|---|---|
+| What it was | Invented branding applied to **the accredited school itself** | A separate **support service** the corporation sells |
+| Source | None — the language appeared nowhere in the school's documentation | None either, **and it says so, on purpose** |
+| Appears in the packet? | Yes — it *was* the public face of the school | **No.** `/accreditation`, `/handbook`, and `lib/content/accreditation.tsx` are untouched |
+| Who the family is | A prospective VA School student | An independent homeschooler under Iowa CPI; the school is **not** their school of record |
+
+The rule this obeys is rule 2 below: do not change a factual claim about the accredited
+school without checking the filed PDF. A $20/month service that is explicitly *not*
+enrollment, sold to families who are explicitly *not* students, makes no claim about the
+accredited school at all — so it needs no source document, and it must stay out of the
+packet until and unless Document 4 §4.3 is actually amended.
+
+The structured data lives in `homeschoolAtHome` in `lib/site.ts`, whose banner comment
+carries the same warning and the list of files that may never import it.
+
+**If the tier is ever folded into the submission**, the order is: amend the source PDF
+first, then `lib/content/accreditation.tsx` and `/handbook`, then this table. Never the
+other way round.
 
 ## Known placeholders
 

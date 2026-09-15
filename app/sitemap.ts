@@ -38,6 +38,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/enroll", priority: 0.9, changeFrequency: "monthly" },
     { path: "/admissions", priority: 0.9, changeFrequency: "monthly" },
     { path: "/tuition", priority: 0.8, changeFrequency: "monthly" },
+    { path: "/homeschool", priority: 0.8, changeFrequency: "monthly" },
     { path: "/curriculum", priority: 0.8, changeFrequency: "yearly" },
     { path: "/higher-institute", priority: 0.8, changeFrequency: "yearly" },
     { path: "/mission", priority: 0.7, changeFrequency: "yearly" },

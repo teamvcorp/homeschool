@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { school, admissionsSteps, nonDiscrimination, cohorts, categoryStyles } from "@/lib/site";
+import {
+  school,
+  admissionsSteps,
+  nonDiscrimination,
+  cohorts,
+  categoryStyles,
+  homeschoolAtHome,
+} from "@/lib/site";
 import { PageHeader, Prose } from "@/app/components/ui/PageHeader";
 import { Section, SectionHeading } from "@/app/components/ui/Section";
 import { ProcessSteps } from "@/app/components/ui/ProcessSteps";
@@ -167,6 +174,40 @@ export default function AdmissionsPage() {
           </Link>
           , which you will affirm at enrollment.
         </p>
+      </Section>
+
+      {/* Homeschool at Home.
+
+          This page is where a family who is interested but not ready bounces, which makes
+          it the single highest-value place on the site to name the cheaper option. It sits
+          AFTER the four steps and the honest "before you apply" warnings — a family who
+          has just read "Taekwondo is required" and "families are expected to engage" is
+          exactly the reader this tier was built for.
+
+          ⚠️  It stays subordinate to the enrollment pitch above it. This page sells the
+          school; this section catches the people it did not convince. */}
+      <Section tone="muted">
+        <SectionHeading
+          eyebrow="Not ready for step one?"
+          title="You can start smaller"
+          lead={homeschoolAtHome.positioning}
+        />
+        <div className="mt-6 max-w-3xl">
+          <Prose>
+            <p>
+              {homeschoolAtHome.monthlyFeeLabel}. You keep teaching at home, we supply the
+              curriculum, the app, a teacher to ask, and the grading — and your child can
+              train Taekwondo at the dojo if you are close enough to get here. Families
+              move up to full enrollment when they are ready, and many do.
+            </p>
+          </Prose>
+          <div className="mt-6">
+            <ButtonLink href="/homeschool" variant="outline">
+              See Homeschool at Home
+              <ArrowIcon />
+            </ButtonLink>
+          </div>
+        </div>
       </Section>
 
       <CTABand />

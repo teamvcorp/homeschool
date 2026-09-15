@@ -6,6 +6,7 @@ import CharacterPillars from "@/app/components/home/CharacterPillars";
 import Cohorts from "@/app/components/home/Cohorts";
 import Programs from "@/app/components/home/Programs";
 import TuitionTeaser from "@/app/components/home/TuitionTeaser";
+import HomeschoolTeaser from "@/app/components/home/HomeschoolTeaser";
 import { CTABand } from "@/app/components/ui/CTABand";
 
 /**
@@ -36,6 +37,9 @@ export default function HomePage() {
       <Cohorts />
       <Programs />
       <TuitionTeaser />
+      {/* After the tuition pitch, never before it: the home page sells the school first,
+          and this catches the family it did not convince. See the component's own note. */}
+      <HomeschoolTeaser />
       <CTABand />
     </>
   );
