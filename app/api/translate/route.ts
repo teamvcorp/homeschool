@@ -5,11 +5,7 @@ import { consumeRateLimit, hashIdentifier, RATE_LIMITS } from "@/lib/auth/rate-l
 import { isLocale, DEFAULT_LOCALE } from "@/lib/i18n/locales";
 import { translate, MAX_SOURCE_CHARS } from "@/lib/translate/service";
 import { normalizeForHash } from "@/lib/translate/cache";
-import {
-  ACKNOWLEDGMENT_LIST,
-  AGREEMENT_PREAMBLE,
-  SIGNATURE_ATTESTATION,
-} from "@/lib/enrollment/agreement-text";
+import { AGREEMENTS, acknowledgmentList } from "@/lib/enrollment/agreement-text";
 
 /**
  * ON-DEMAND TRANSLATION ENDPOINT
@@ -56,14 +52,18 @@ export const dynamic = "force-dynamic";
  * POST the acknowledgments to it directly. So the refusal is enforced here, on content,
  * where it cannot be routed around.
  *
- * Built once at module load from the same source the signing screen renders.
+ * Built once at module load from the same source the signing screen renders — and from
+ * EVERY version (Iowa and national, since 2026-11-09), so a newer or older wording cannot
+ * slip through because only one version was listed.
  */
 const AGREEMENT_TEXTS: ReadonlySet<string> = new Set(
-  [
-    AGREEMENT_PREAMBLE,
-    SIGNATURE_ATTESTATION,
-    ...ACKNOWLEDGMENT_LIST.map((a) => a.text),
-  ].map(normalizeForHash),
+  Object.values(AGREEMENTS)
+    .flatMap((agreement) => [
+      agreement.preamble,
+      agreement.attestation,
+      ...acknowledgmentList(agreement).map((a) => a.text),
+    ])
+    .map(normalizeForHash),
 );
 
 function isAgreementText(normalized: string): boolean {

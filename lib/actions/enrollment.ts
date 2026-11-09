@@ -22,7 +22,11 @@ import {
   siblingSeed,
   SIBLING_SEED_MAX_AGE_MS,
 } from "../enrollment/draft";
-import { agreementHash, CONSENT_VERSION } from "../enrollment/agreement";
+import {
+  agreementHash,
+  AGREEMENTS,
+  consentVersionForState,
+} from "../enrollment/agreement";
 import { applicationsCollection } from "../db/collections";
 import { ACKNOWLEDGMENT_KEYS } from "../db/enums";
 import type { EnrollmentApplicationDoc } from "../db/types";
@@ -433,6 +437,16 @@ export async function submitEnrollmentAction(
      */
     const locale = await getLocale();
 
+    /**
+     * WHICH AGREEMENT WAS SIGNED — derived from the VALIDATED state, on the server.
+     *
+     * Never taken from a form field: a crafted POST could otherwise claim to have signed
+     * the Iowa wording while living elsewhere, or vice versa. The sign page shows the
+     * same `consentVersionForState(state)` text, so what was displayed and what is
+     * recorded come from one function.
+     */
+    const agreement = AGREEMENTS[consentVersionForState(a.guardianState)];
+
     const application: EnrollmentApplicationDoc = {
       status: "submitted",
 
@@ -447,6 +461,7 @@ export async function submitEnrollmentAction(
         email: a.guardianEmail,
         phone: a.guardianPhone,
         address: a.guardianAddress,
+        state: a.guardianState,
         emergencyContactName: a.emergencyContactName,
         emergencyContactPhone: a.emergencyContactPhone,
       },
@@ -487,8 +502,8 @@ export async function submitEnrollmentAction(
          * in here would silently change what every signature attests to; that is what
          * scripts/check-agreement-hash.ts exists to catch.
          */
-        agreementHash: agreementHash(),
-        consentVersion: CONSENT_VERSION,
+        agreementHash: agreementHash(agreement),
+        consentVersion: agreement.version,
         /**
          * ...and the language they were READING. Paired with the hash, the school can
          * show both the exact terms and the language in which they were presented, which

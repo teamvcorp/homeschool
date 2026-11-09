@@ -185,6 +185,7 @@ const jar = newJar();
   const r = await postForm(jar, "/enroll/guardian", form, {
     guardianName: "Regression Guardian",
     guardianAddress: "1 Regression Way, Storm Lake, IA 50588",
+    guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
     guardianPhone: "712-555-0101",
     guardianEmail: `regression-parent+${RUN_TAG}@example.com`,
     emergencyContactName: "Emergency Contact",

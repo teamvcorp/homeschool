@@ -7,6 +7,7 @@ import {
   MEDIA_RELEASE_CHOICES,
   ACKNOWLEDGMENT_KEYS,
 } from "../db/enums";
+import { US_STATE_CODES } from "../us-states";
 
 /**
  * ENROLLMENT AGREEMENT VALIDATION — Document 9
@@ -117,6 +118,18 @@ export const studentStepSchema = z.object({
 export const guardianStepSchema = z.object({
   guardianName: shortText("Parent/guardian name", 200),
   guardianAddress: shortText("Address", 300),
+  /**
+   * The state the family LIVES in, as a USPS code ("IA"). Added 2026-11-09 when
+   * enrollment opened to every state.
+   *
+   * ⚠️  LOAD-BEARING, NOT DEMOGRAPHIC. It decides which agreement version the family
+   * signs (Iowa as filed vs national — see consentVersionForState) and which funding and
+   * immunization wording they are shown. That is why it is an enum of codes and not free
+   * text: "iowa", "Iowa " and "IA" must not be able to route three different ways.
+   */
+  guardianState: z.enum(US_STATE_CODES, {
+    error: "Choose the state you live in",
+  }),
   guardianPhone: phone("Primary phone"),
   guardianEmail: email,
   emergencyContactName: optionalText(200),
@@ -126,7 +139,10 @@ export const guardianStepSchema = z.object({
 /* --------------------------------- Step 3 ---------------------------------- */
 
 /**
- * Document 9 §9.3 — Iowa ESA / School Choice.
+ * Document 9 §9.3 — Iowa ESA / School Choice. Same three stored values in every state;
+ * only the LABELS change by state (step-form.tsx). Outside Iowa, `intendsToApply` means
+ * "we would like to use a state program if one is available to us", which the school
+ * then confirms — it is never a promise that funding exists.
  *
  * The PDF prints three checkboxes, but the options are mutually exclusive, so this
  * is a radio group. Rendering it as checkboxes would let a family submit a
@@ -143,8 +159,10 @@ export const fundingStepSchema = z.object({
 /**
  * Document 9 §9.5 — Medical & Health.
  *
- * Immunization is a required either/or: Iowa law requires documentation of
- * compliance OR a valid exemption, and admits no third state. There is deliberately
+ * Immunization is a required either/or: state law (Iowa's, and in practice every
+ * state's school-entry rules) requires documentation of compliance OR a valid
+ * exemption. Which exemptions are valid differs by state; the wizard wording says
+ * "your state" and the school confirms at intake. There is deliberately
  * no "not sure" option — a family who is unsure needs the intake conversation, not
  * a database row that looks settled.
  */
@@ -155,7 +173,7 @@ export const medicalStepSchema = z.object({
   doctorPhone: optionalPhone,
   immunizationStatus: z.enum(IMMUNIZATION_STATUSES, {
     error:
-      "Iowa law requires either immunization records or a valid exemption on file — choose one",
+      "State law requires either immunization records or a valid exemption on file — choose one",
   }),
 });
 
@@ -200,8 +218,8 @@ export const mediaStepSchema = z.object({
 /**
  * Document 9 §9.7 — Signature.
  *
- * `intentAffirmed` is the legally operative field. Under the E-SIGN Act and Iowa
- * UETA (Iowa Code ch. 554D) an electronic signature is valid on demonstrable intent
+ * `intentAffirmed` is the legally operative field. Under the federal E-SIGN Act and
+ * each state's UETA (Iowa: Iowa Code ch. 554D) an electronic signature is valid on demonstrable intent
  * to sign plus attribution — so intent is captured as its own explicit affirmation
  * rather than inferred from the act of typing a name.
  */

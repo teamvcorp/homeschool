@@ -198,6 +198,7 @@ const guardian = await submitStep(
   {
     guardianName: "Test Guardian",
     guardianAddress: "1 Test Lane, Storm Lake, IA 50588",
+    guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
     guardianPhone: "712-555-0142",
     guardianEmail: `verify-alpha+${RUN_TAG}@example.com`,
     emergencyContactName: "",
@@ -280,6 +281,16 @@ check(
 // 6. HONEYPOT test on the sign page
 const signPage = await get("/enroll/sign");
 check("Sign page renders", signPage.status === 200);
+/**
+ * STATE ROUTING, Iowa half: an IA family must see Document 9 exactly as filed — no
+ * partner-school clause. The national half is at the end of this file.
+ */
+check(
+  "IOWA: sign page shows the as-filed wording (no partner-school clause)",
+  signPage.body.includes("Taekwondo is a core and required component of enrollment, not elective.") &&
+    !signPage.body.includes("partner Taekwondo school"),
+);
+check("Review shows the family's state", review.body.includes("Iowa"));
 await sleep(2200);
 const honeypotTrap = await postAction("/enroll/sign", signPage.body, {
   typedName: "Bot Filler",
@@ -350,6 +361,114 @@ check(
   "Deep-link without a draft redirects to /enroll",
   orphan.status === 307 && (orphan.location ?? "").endsWith("/enroll"),
   `status=${orphan.status} location=${orphan.location}`,
+);
+
+/* -------------------------------------------------------------------------- */
+/* 12. ENROLLMENT OUTSIDE IOWA (2026-11-09) — the national agreement version   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A fresh family in Texas. Cookies are cleared first so this is a NEW agreement, not a
+ * sibling seeded from the Iowa one above (whose carried-over state would be IA).
+ */
+console.log("\n=== OUTSIDE IOWA — national agreement version ===\n");
+cookies = new Map();
+
+const startTx = await get("/enroll");
+await sleep(2200);
+const begunTx = await postAction("/enroll", startTx.body, {});
+check("TX: new agreement started", begunTx.status === 303 && cookies.has("va_enroll_draft"));
+
+const studentTx = await submitStep(
+  "/enroll/student",
+  {
+    studentLegalName: `Texas Student ${RUN_TAG}`,
+    dateOfBirth: "2013-02-02",
+    gradeLevel: "Grade 7",
+    requestedCohort: "middle",
+    enrollmentStartDate: "2026-09-01",
+  },
+  "TX student step",
+);
+check("TX: student step accepted", studentTx?.status === 303);
+
+const guardianTxFields = {
+  guardianName: "Texas Guardian",
+  guardianAddress: "1 Test Rd, Austin, TX 78701",
+  guardianPhone: "512-555-0142",
+  guardianEmail: `verify-texas+${RUN_TAG}@example.com`,
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+};
+
+// The state decides which legal text is signed, so it must be REQUIRED, not defaulted.
+const noState = await submitStep("/enroll/guardian", guardianTxFields, "TX guardian (no state)");
+check(
+  "VALIDATION: guardian step without a state is REJECTED",
+  noState?.status === 200 && noState?.location === null,
+  `status=${noState?.status}`,
+);
+
+const guardianTx = await submitStep(
+  "/enroll/guardian",
+  { ...guardianTxFields, guardianState: "TX" },
+  "TX guardian step",
+);
+check("TX: guardian step accepted", guardianTx?.status === 303);
+
+const fundingPageTx = await get("/enroll/funding");
+check(
+  "TX: funding step shows national wording, not Iowa ESA",
+  fundingPageTx.body.includes("state school-choice program") &&
+    !fundingPageTx.body.includes("apply for Iowa ESA funding"),
+);
+const fundingTx = await submitStep("/enroll/funding", { esaElection: "payingDirectly" }, "TX funding");
+check("TX: funding step accepted", fundingTx?.status === 303);
+
+const medicalPageTx = await get("/enroll/medical");
+check(
+  "TX: immunization hint refers to the family's state, not Iowa law",
+  medicalPageTx.body.includes("Your state&#x27;s law") || medicalPageTx.body.includes("Your state's law"),
+);
+const medicalTx = await submitStep(
+  "/enroll/medical",
+  {
+    conditionsAndAllergies: "",
+    medications: "",
+    doctorName: "",
+    doctorPhone: "",
+    immunizationStatus: "exemptionOnFile",
+  },
+  "TX medical",
+);
+check("TX: medical step accepted", medicalTx?.status === 303);
+
+const ackPageTx = await get("/enroll/acknowledgments");
+check(
+  "TX: acknowledgments show the partner-school clause",
+  ackPageTx.body.includes("partner Taekwondo school"),
+);
+const ackTx = await submitStep("/enroll/acknowledgments", allAcks, "TX acknowledgments");
+check("TX: all 8 acknowledgments accepted", ackTx?.status === 303);
+
+const mediaTx = await submitStep("/enroll/media", { mediaRelease: "consent" }, "TX media");
+check("TX: media step accepted", mediaTx?.status === 303);
+
+const signPageTx = await get("/enroll/sign");
+check(
+  "TX: sign page shows the national wording (partner school + information sharing)",
+  signPageTx.body.includes("partner Taekwondo school") &&
+    signPageTx.body.includes("covers the Taekwondo program fee"),
+);
+await sleep(2200);
+const submittedTx = await postAction("/enroll/sign", signPageTx.body, {
+  typedName: "Texas Guardian",
+  intentAffirmed: "true",
+});
+check(
+  "TX: national agreement submits successfully",
+  submittedTx.status === 303,
+  submittedTx.status === 303 ? "" : `status=${submittedTx.status} — ${serverError(submittedTx.body)}`,
 );
 
 console.log("\n=== SUMMARY ===");

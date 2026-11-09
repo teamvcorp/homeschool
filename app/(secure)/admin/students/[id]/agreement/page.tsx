@@ -5,7 +5,8 @@ import { requireUser, requireStudentAccess, AuthorizationError } from "@/lib/dal
 import { findStudent, findApplication } from "@/lib/queries/records";
 import { logAudit } from "@/lib/audit";
 import { school, addressLine, tuition } from "@/lib/site";
-import { ACKNOWLEDGMENT_LIST, AGREEMENT_PREAMBLE } from "@/lib/enrollment/agreement";
+import { getAgreement } from "@/lib/enrollment/agreement";
+import { ACKNOWLEDGMENT_KEYS } from "@/lib/db/enums";
 import { Crest } from "@/app/components/ui/Crest";
 import PrintButton from "@/app/components/PrintButton";
 
@@ -111,6 +112,19 @@ export default async function ExecutedAgreementPage({
   });
 
   const sig = application.guardianSignature;
+  /**
+   * THE WORDING THIS FAMILY SIGNED, by the version stored on the signature (Iowa as filed,
+   * or national — see lib/enrollment/agreement-text.ts). Never "the current text": this
+   * page is the executed record, and must show the words the hash on it covers. An
+   * unknown version shows a plain placeholder rather than substituting other wording.
+   */
+  const signedAgreement = getAgreement(sig.consentVersion);
+  const ackRows = ACKNOWLEDGMENT_KEYS.map((key) => ({
+    key,
+    text:
+      signedAgreement?.acknowledgments[key] ??
+      `[Wording for consent version "${sig.consentVersion}" is not available in this build.]`,
+  }));
   const counter = application.headOfSchoolSignature;
 
   return (
@@ -208,10 +222,10 @@ export default async function ExecutedAgreementPage({
           Program acknowledgments
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          {AGREEMENT_PREAMBLE}
+          {signedAgreement?.preamble}
         </p>
         <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5">
-          {ACKNOWLEDGMENT_LIST.map((ack) => (
+          {ackRows.map((ack) => (
             <li key={ack.key} className="print-keep text-sm leading-relaxed text-ink">
               {ack.text}
               <span

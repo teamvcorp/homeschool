@@ -145,6 +145,10 @@ export const es = {
   /* --- Paso 2: padre / tutor --- */
   "funnel.field.guardianName.label": "Nombre(s) del padre / tutor",
   "funnel.field.guardianAddress.label": "Domicilio",
+  /* Añadido 2026-11-09 — pendiente de revisión por un hablante nativo, como el resto. */
+  "funnel.field.guardianState.label": "Estado donde vive",
+  "funnel.field.guardianState.hint":
+    "Esto determina qué versión del acuerdo de inscripción le corresponde y qué opciones de financiamiento le describimos.",
   "funnel.field.guardianPhone.label": "Teléfono principal",
   "funnel.field.guardianEmail.label": "Correo electrónico",
   "funnel.field.guardianEmail.hint":
@@ -157,6 +161,12 @@ export const es = {
   "funnel.funding.legend": "¿Cómo se pagará la matrícula?",
   "funnel.funding.hint":
     "Las solicitudes de ESA se hacen directamente ante el Departamento de Educación de Iowa. Le proporcionaremos cualquier documentación que su solicitud necesite.",
+  "funnel.funding.national.hint":
+    "Los fondos de elección escolar (cuentas de ahorro educativo o programas de becas) dependen de su estado y de la situación de la escuela allí. Le confirmaremos qué aplica, si es que aplica algo.",
+  "funnel.funding.national.esa.label":
+    "Nos gustaría usar un programa estatal de elección escolar si hay uno disponible para nosotros",
+  "funnel.funding.national.esa.description":
+    "No está garantizado. Hasta que la escuela confirme que un programa aplica en su estado, la contribución mensual de ${monthlyContribution} por estudiante se paga directamente.",
   "funnel.funding.esa.label": "Pensamos solicitar fondos ESA de Iowa",
   "funnel.funding.esa.description":
     "Aproximadamente ${esaEstimate} por estudiante al año, pagados por el Estado de Iowa.",
@@ -178,6 +188,8 @@ export const es = {
   "funnel.immunization.legend": "Documentación de vacunas",
   "funnel.immunization.hint":
     "La ley de Iowa exige documentación del cumplimiento del esquema de vacunas o una exención válida. Traiga los documentos a su reunión inicial; aquí no hace falta subir nada.",
+  "funnel.immunization.national.hint":
+    "La ley de su estado exige documentación del cumplimiento del esquema de vacunas o una exención que el estado reconozca. Traiga los documentos a su reunión inicial; aquí no hace falta subir nada.",
   "funnel.immunization.records": "Tenemos disponible el registro de vacunas",
   "funnel.immunization.exemption": "Tenemos disponible una exención válida",
 

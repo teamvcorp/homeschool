@@ -4,11 +4,17 @@ import {
   ENROLLMENT_STEPS,
   getStep,
   stepIndex,
+  stepHref,
   gradeAgeWarning,
   type StepSlug,
 } from "@/lib/validation/enrollment";
 import { loadActiveDraft } from "@/lib/enrollment/draft";
-import { ACKNOWLEDGMENT_LIST } from "@/lib/enrollment/agreement";
+import {
+  AGREEMENTS,
+  acknowledgmentList,
+  consentVersionForState,
+} from "@/lib/enrollment/agreement";
+import { US_STATE_CODES, type UsStateCode } from "@/lib/us-states";
 import { issueFormTimestamp } from "@/lib/anti-abuse";
 import { saveEnrollmentStep } from "@/lib/actions/enrollment";
 import { PageHeader } from "@/app/components/ui/PageHeader";
@@ -92,6 +98,27 @@ export default async function EnrollStepPage({
     }
   }
 
+  /**
+   * THE FAMILY'S STATE decides which agreement they see (Iowa as filed, or national).
+   *
+   * Every step from `funding` onward shows state-dependent wording, and the
+   * acknowledgments/review/sign steps show the AGREEMENT itself, so they must not render
+   * without a valid state. A draft lacking one (started before 2026-11-09, or a
+   * deep link) is sent back to the guardian step to choose it — never defaulted, because
+   * a default would silently pick which legal text a family signs.
+   */
+  const rawState = data.guardianState;
+  const guardianState: UsStateCode | null =
+    typeof rawState === "string" &&
+    (US_STATE_CODES as readonly string[]).includes(rawState)
+      ? (rawState as UsStateCode)
+      : null;
+  const stateDependent = stepIndex(slug as StepSlug) > stepIndex("guardian");
+  if (stateDependent && !guardianState) redirect(stepHref("guardian"));
+  const agreement = guardianState
+    ? AGREEMENTS[consentVersionForState(guardianState)]
+    : null;
+
   const index = stepIndex(slug as StepSlug);
   const previous: Route | null =
     index > 0 ? (`/enroll/${ENROLLMENT_STEPS[index - 1].slug}` as Route) : null;
@@ -167,7 +194,9 @@ export default async function EnrollStepPage({
           {slug === "review" ? (
             <ReviewPanel data={data} warning={warning} />
           ) : slug === "sign" ? (
-            <SignPanel timestamp={timestamp} />
+            // `agreement` is non-null here: sign is after guardian, so the redirect above
+            // has already guaranteed a valid state.
+            <SignPanel timestamp={timestamp} version={agreement!.version} />
           ) : (
             <StepForm
               slug={slug as StepSlug}
@@ -176,7 +205,8 @@ export default async function EnrollStepPage({
               action={saveEnrollmentStep.bind(null, slug as StepSlug)}
               defaults={defaults}
               timestamp={timestamp}
-              acknowledgments={[...ACKNOWLEDGMENT_LIST]}
+              acknowledgments={agreement ? acknowledgmentList(agreement) : []}
+              guardianState={guardianState}
               previousHref={previous}
               showCarryOverNotice={showCarryOverNotice}
               locale={locale}

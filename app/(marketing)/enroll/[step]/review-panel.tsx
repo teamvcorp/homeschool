@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cohorts, tuition } from "@/lib/site";
-import { ACKNOWLEDGMENT_LIST } from "@/lib/enrollment/agreement";
+import { ACKNOWLEDGMENT_KEYS } from "@/lib/db/enums";
+import { stateName } from "@/lib/us-states";
 import { stepHref, type StepSlug } from "@/lib/validation/enrollment";
 import { ButtonLink, ArrowIcon } from "@/app/components/ui/Button";
 import { Callout } from "@/app/components/ui/Callout";
@@ -102,9 +103,8 @@ export default function ReviewPanel({
   warning: string | null;
 }) {
   const cohort = cohorts.find((c) => c.id === data.requestedCohort);
-  const acceptedCount = ACKNOWLEDGMENT_LIST.filter(
-    (a) => data[a.key] === true,
-  ).length;
+  // Keys, not wording: both agreement versions share the same eight keys.
+  const acceptedCount = ACKNOWLEDGMENT_KEYS.filter((key) => data[key] === true).length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -131,6 +131,8 @@ export default function ReviewPanel({
         items={[
           { label: "Name(s)", value: str(data.guardianName) },
           { label: "Address", value: str(data.guardianAddress) },
+          // Shown because it decides which agreement version they are about to sign.
+          { label: "State", value: stateName(str(data.guardianState)) || "—" },
           { label: "Phone", value: str(data.guardianPhone) },
           { label: "Email", value: str(data.guardianEmail) },
           { label: "Emergency contact", value: str(data.emergencyContactName) },
@@ -179,7 +181,7 @@ export default function ReviewPanel({
         items={[
           {
             label: "Accepted",
-            value: `${acceptedCount} of ${ACKNOWLEDGMENT_LIST.length}`,
+            value: `${acceptedCount} of ${ACKNOWLEDGMENT_KEYS.length}`,
           },
         ]}
       />

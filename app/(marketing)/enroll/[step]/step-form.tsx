@@ -13,6 +13,7 @@ import {
   MEDIA_RELEASE_CHOICES,
 } from "@/lib/db/enums";
 import type { StepSlug } from "@/lib/validation/enrollment";
+import { US_STATES, IOWA, type UsStateCode } from "@/lib/us-states";
 import {
   TextInput,
   TextArea,
@@ -52,6 +53,7 @@ export default function StepForm({
   previousHref,
   showCarryOverNotice = false,
   locale,
+  guardianState = null,
 }: {
   slug: StepSlug;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -66,8 +68,15 @@ export default function StepForm({
    * language cookie. The step page resolves it server-side and hands it down.
    */
   locale: Locale;
+  /**
+   * The family's saved state (null before the guardian step). Iowa families see the
+   * Iowa ESA and Iowa-law wording, exactly as before; everyone else sees state-neutral
+   * wording that promises no funding the school cannot confirm.
+   */
+  guardianState?: UsStateCode | null;
 }) {
   const tr = translator(locale);
+  const isIowa = guardianState === IOWA;
   const [state, formAction] = useActionState(action, idleState);
   const err = (name: string) => state.fieldErrors?.[name]?.[0];
 
@@ -155,6 +164,17 @@ export default function StepForm({
             error={err("guardianAddress")}
             autoComplete="street-address"
           />
+          {/* Decides which agreement version applies — see guardianState in
+              lib/validation/enrollment.ts. Stored as the USPS code. */}
+          <Select
+            name="guardianState"
+            label={tr("funnel.field.guardianState.label")}
+            required
+            defaultValue={defaults.guardianState}
+            error={err("guardianState")}
+            hint={tr("funnel.field.guardianState.hint")}
+            options={US_STATES.map((s) => ({ value: s.code, label: s.name }))}
+          />
           <TextInput
             name="guardianPhone"
             label={tr("funnel.field.guardianPhone.label")}
@@ -196,15 +216,25 @@ export default function StepForm({
           legend={tr("funnel.funding.legend")}
           defaultValue={defaults.esaElection}
           error={err("esaElection")}
-          hint={tr("funnel.funding.hint")}
+          hint={tr(isIowa ? "funnel.funding.hint" : "funnel.funding.national.hint")}
           options={[
-            {
-              value: ESA_ELECTIONS[0],
-              label: tr("funnel.funding.esa.label"),
-              description: tr("funnel.funding.esa.description", {
-                esaEstimate: tuition.esaEstimate.toLocaleString(),
-              }),
-            },
+            // Same stored value everywhere; outside Iowa it is a REQUEST to use a state
+            // program, which the school confirms — never a statement that one exists.
+            isIowa
+              ? {
+                  value: ESA_ELECTIONS[0],
+                  label: tr("funnel.funding.esa.label"),
+                  description: tr("funnel.funding.esa.description", {
+                    esaEstimate: tuition.esaEstimate.toLocaleString(),
+                  }),
+                }
+              : {
+                  value: ESA_ELECTIONS[0],
+                  label: tr("funnel.funding.national.esa.label"),
+                  description: tr("funnel.funding.national.esa.description", {
+                    monthlyContribution: tuition.monthlyContribution,
+                  }),
+                },
             {
               value: ESA_ELECTIONS[1],
               label: tr("funnel.funding.direct.label"),
@@ -255,7 +285,9 @@ export default function StepForm({
             legend={tr("funnel.immunization.legend")}
             defaultValue={defaults.immunizationStatus}
             error={err("immunizationStatus")}
-            hint={tr("funnel.immunization.hint")}
+            hint={tr(
+              isIowa ? "funnel.immunization.hint" : "funnel.immunization.national.hint",
+            )}
             options={[
               {
                 value: IMMUNIZATION_STATUSES[0],

@@ -55,7 +55,7 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | `scripts/e2e/verify-translate.mjs` | The language lens endpoint: origin/length/locale guards, the agreement refusal, and the cache. |
 | `scripts/e2e/verify-password-reset.mjs` | Reset and change-password: enumeration resistance asserted by string equality, single-use / expiring / purpose-bound tokens, and the `sessionEpoch` bump that evicts sessions created before the reset. |
 | `scripts/e2e/verify-homeschool.mjs` | Read-only (GETs only). Homeschool at Home copy: new price ($19.95 / $10), a link to the app's sign-up (`app.vaschool.org/enroll`) and **no** app-login link inside `<main>`, no Taekwondo promise, no form on `/homeschool`. Also checks `/`, `/tuition`, `/admissions`. Header/footer legitimately link the login for enrolled families, so the login check is scoped to `<main>` (it failed on the whole page before 2026-11-09). That `/homeschool` is static is checked in the build table (○), not here. |
-| `scripts/check-agreement-hash.ts` | Pins the agreement's SHA-256 so no change to the signed wording can pass unnoticed. |
+| `scripts/check-agreement-hash.ts` | Pins the SHA-256 of **every** agreement version (Iowa `2026-08-01`, national `2026-11-09-national`) so no change to signed wording can pass unnoticed. See `agreement-versions.md`. `verify-enroll.mjs` also walks a full **Texas** agreement (national wording, missing-state rejection). |
 
 ## The database rule
 
@@ -315,7 +315,7 @@ Last full run — all five harnesses green in a single `npm run e2e`, **134 chec
 |---|---|
 | `check:email` | 17 / 17 |
 | `check:reset-email` | 23 / 23 |
-| `check:agreement` | pinned at `2308d0e0…` |
+| `check:agreement` | Iowa pinned at `2308d0e0…` (unchanged), national at `067a373d…` (2026-11-09) |
 | `verify-enroll` | 20 / 20 |
 | `verify-bugfix` | 28 / 28 |
 | `verify-admin` | 45 / 45 |
@@ -333,6 +333,18 @@ The build's `○` / `ƒ` column is a real assertion, not decoration: the languag
 read in `app/(marketing)/enroll/layout.tsx` rather than the root layout precisely so the
 marketing pages stay static. If they ever appear as `ƒ`, a cookie is being read too high in
 the tree.
+
+### Run of 2026-11-09 (state-versioned agreement)
+
+All 11 harnesses green from `npm run e2e`, **303 checks**: errors 22, enroll 35 (incl. the
+Texas/national walk and missing-state rejection), bugfix 28, admin 45, promote 24,
+agreement 17, notifications 24, language 35, translate 18 (+2 skipped, no
+`ANTHROPIC_API_KEY`), homeschool 27, password reset 28. Stored records confirmed:
+IA → `2026-08-01` / `2308d0e0…`, TX → `2026-11-09-national` / `067a373d…`.
+
+Windows notes from that run: port 3000 may be taken — run `next dev -p <port>` with
+`E2E_BASE_URL` and `NEXT_PUBLIC_SITE_URL` set to match (the translate origin guard
+compares against it).
 
 ## What is NOT covered
 

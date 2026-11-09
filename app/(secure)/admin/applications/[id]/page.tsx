@@ -6,8 +6,9 @@ import { can } from "@/lib/auth/roles";
 import { findApplication } from "@/lib/queries/records";
 import { toApplicationDetail } from "@/lib/dto";
 import { logAudit } from "@/lib/audit";
-import { APPLICATION_TRANSITIONS } from "@/lib/db/enums";
-import { ACKNOWLEDGMENT_LIST } from "@/lib/enrollment/agreement";
+import { APPLICATION_TRANSITIONS, ACKNOWLEDGMENT_KEYS } from "@/lib/db/enums";
+import { getAgreement } from "@/lib/enrollment/agreement";
+import { stateName } from "@/lib/us-states";
 import { LOCALE_LABELS } from "@/lib/i18n/locales";
 import SecureHeader from "@/app/components/secure/SecureHeader";
 import { ADMIN_NAV } from "@/app/components/secure/nav";
@@ -75,9 +76,19 @@ export default async function ApplicationDetailPage({
 
   const allowedTransitions = APPLICATION_TRANSITIONS[doc.status];
   const mayDecide = can(user.role, "applications:decide");
-  const allAcknowledged = ACKNOWLEDGMENT_LIST.every(
-    (ack) => a.acknowledgments[ack.key],
-  );
+  const allAcknowledged = ACKNOWLEDGMENT_KEYS.every((key) => a.acknowledgments[key]);
+  /**
+   * The wording THIS FAMILY SIGNED, looked up by the version on their signature — never
+   * "the current text". With two versions (Iowa / national) the current text would show
+   * staff words a family never saw. Unknown version → keys only, plainly flagged.
+   */
+  const signedAgreement = getAgreement(a.signature.consentVersion);
+  const ackRows = ACKNOWLEDGMENT_KEYS.map((key) => ({
+    key,
+    text: signedAgreement
+      ? signedAgreement.acknowledgments[key]
+      : `${key} (wording for version "${a.signature.consentVersion}" not found in this build)`,
+  }));
 
   return (
     <>
@@ -212,6 +223,11 @@ export default async function ApplicationDetailPage({
                     },
                     { label: "Address", value: a.guardianAddress },
                     {
+                      // Pre-2026-11-09 applications have no state; all were Iowa-version.
+                      label: "State",
+                      value: a.guardianState ? stateName(a.guardianState) : "— (not collected)",
+                    },
+                    {
                       /**
                        * Shown to staff so whoever calls knows which language to open
                        * with. Status emails are already sent in it automatically.
@@ -290,11 +306,11 @@ export default async function ApplicationDetailPage({
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
                 {allAcknowledged
-                  ? `All ${ACKNOWLEDGMENT_LIST.length} accepted.`
+                  ? `All ${ACKNOWLEDGMENT_KEYS.length} accepted.`
                   : "⚠ Not all acknowledgments were accepted — this should not be possible."}
               </p>
               <ul className="mt-3 flex list-none flex-col gap-2">
-                {ACKNOWLEDGMENT_LIST.map((ack) => (
+                {ackRows.map((ack) => (
                   <li key={ack.key} className="flex items-start gap-2 text-sm">
                     <span
                       aria-hidden="true"
@@ -349,7 +365,12 @@ export default async function ApplicationDetailPage({
                       value: new Date(a.signature.signedAt).toLocaleString("en-US"),
                     },
                     { label: "IP address", value: a.signature.ip ?? "—" },
-                    { label: "Consent version", value: a.signature.consentVersion },
+                    {
+                      label: "Consent version",
+                      value: signedAgreement
+                        ? `${a.signature.consentVersion} — ${signedAgreement.appliesTo}`
+                        : a.signature.consentVersion,
+                    },
                     {
                       /**
                        * The language on screen at signing. The fingerprint below always

@@ -322,6 +322,9 @@ export function siblingSeed(
   const carry = [
     "guardianName",
     "guardianAddress",
+    // Carried with the address it belongs to. "Your address" on the confirmation page
+    // already covers it, so the user-facing carry-over promise is unchanged.
+    "guardianState",
     "guardianPhone",
     "guardianEmail",
     "emergencyContactName",

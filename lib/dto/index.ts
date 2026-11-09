@@ -138,6 +138,8 @@ export interface ApplicationDetail extends ApplicationListItem {
   dateOfBirth: string | null;
   enrollmentStartDate: string | null;
   guardianAddress: string;
+  /** USPS code; null on applications made before states were collected (2026-11-09). */
+  guardianState: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   esaElection: string;
@@ -186,6 +188,7 @@ export function toApplicationDetail(
     dateOfBirth: isoDate(doc.dateOfBirth),
     enrollmentStartDate: isoDate(doc.enrollmentStartDate),
     guardianAddress: doc.guardian.address,
+    guardianState: doc.guardian.state ?? null,
     emergencyContactName: doc.guardian.emergencyContactName ?? null,
     emergencyContactPhone: doc.guardian.emergencyContactPhone ?? null,
     esaElection: doc.esaElection,

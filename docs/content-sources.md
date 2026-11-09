@@ -109,5 +109,6 @@ rather than inventing values:
    quoted from the source. The packet carries a standing note that they should be
    verified with qualified Iowa education counsel before filing. Do not add new ones
    casually.
-4. **Bump `CONSENT_VERSION`** in `lib/db/enums.ts` if enrollment agreement wording
-   changes — historical signature records identify the version the family saw.
+4. **Never edit a signed agreement version** — add a new version id in
+   `lib/enrollment/agreement-text.ts` and pin it in `scripts/check-agreement-hash.ts`.
+   The agreement is versioned by state since 2026-11-09; see `agreement-versions.md`.

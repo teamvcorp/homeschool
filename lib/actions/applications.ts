@@ -17,7 +17,7 @@ import {
   intakeScheduledEmail,
   applicationAcceptedEmail,
 } from "../email/templates";
-import { agreementHash, CONSENT_VERSION } from "../enrollment/agreement";
+import { agreementHash, getAgreement } from "../enrollment/agreement";
 import {
   buildSchoolEmailLocalPart,
   resolveCollision,
@@ -259,6 +259,24 @@ export async function countersignApplicationAction(
     const { applicationId, typedName } = parsed.data;
     const applications = await applicationsCollection();
 
+    /**
+     * The countersignature attests to THE SAME WORDING THE FAMILY SIGNED. Since the
+     * agreement became versioned by state (2026-11-09) there is no single "current" text,
+     * so the version is read from the family's own signature record — never chosen here.
+     * An unknown version (a record from a newer build, or corrupted) refuses rather than
+     * countersigning words nobody can show.
+     */
+    const existing = await applications.findOne(
+      { _id: new ObjectId(applicationId) },
+      { projection: { "guardianSignature.consentVersion": 1 } },
+    );
+    const agreement = getAgreement(existing?.guardianSignature?.consentVersion);
+    if (!existing || !agreement) {
+      return failure(
+        "That application could not be countersigned: its agreement version was not recognised.",
+      );
+    }
+
     const result = await applications.updateOne(
       // The null guard makes this idempotent: a double-submit cannot overwrite an
       // existing countersignature with a later timestamp.
@@ -269,8 +287,8 @@ export async function countersignApplicationAction(
             typedName,
             intentAffirmed: true,
             signedAt: new Date(),
-            agreementHash: agreementHash(),
-            consentVersion: CONSENT_VERSION,
+            agreementHash: agreementHash(agreement),
+            consentVersion: agreement.version,
           },
           updatedAt: new Date(),
         },

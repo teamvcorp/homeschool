@@ -1,5 +1,6 @@
 import type { ObjectId } from "mongodb";
 import type { Locale } from "../i18n/locales";
+import type { UsStateCode } from "../us-states";
 import type {
   Role,
   CohortId,
@@ -83,6 +84,12 @@ export interface GuardianContact {
   email: string;
   phone: string;
   address: string;
+  /**
+   * USPS state code the family lives in. Optional ONLY because records created before
+   * 2026-11-09 do not have it (those were all Iowa-version agreements). Every new
+   * application has it — the schema requires it.
+   */
+  state?: UsStateCode;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
 }

@@ -200,12 +200,12 @@ export const ACKNOWLEDGMENT_KEYS = [
 ] as const;
 export type AcknowledgmentKey = (typeof ACKNOWLEDGMENT_KEYS)[number];
 
-/**
- * Version stamp for the acknowledgment and agreement wording. Bump this whenever
- * the legal text in the enrollment agreement changes, so a signature record
- * always identifies exactly what was agreed to.
+/*
+ * The agreement's version stamp USED to live here as a single CONSENT_VERSION. Since
+ * 2026-11-09 the agreement is versioned BY STATE — see IOWA_CONSENT_VERSION and
+ * NATIONAL_CONSENT_VERSION in lib/enrollment/agreement-text.ts. Removed from this file so
+ * no caller can stamp a signature with a version that does not match the words shown.
  */
-export const CONSENT_VERSION = "2026-08-01";
 
 /* ------------------------------- Students ---------------------------------- */
 

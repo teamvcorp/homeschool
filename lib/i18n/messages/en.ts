@@ -205,6 +205,10 @@ export const en = {
   /* --- Step 2: guardian --- */
   "funnel.field.guardianName.label": "Parent / guardian name(s)",
   "funnel.field.guardianAddress.label": "Home address",
+  /* Added 2026-11-09 — enrollment opened to every state. */
+  "funnel.field.guardianState.label": "State you live in",
+  "funnel.field.guardianState.hint":
+    "This decides which version of the enrollment agreement applies to you, and which funding options we describe.",
   "funnel.field.guardianPhone.label": "Primary phone",
   "funnel.field.guardianEmail.label": "Email address",
   "funnel.field.guardianEmail.hint": "We send your confirmation and next steps here.",
@@ -215,6 +219,13 @@ export const en = {
   "funnel.funding.legend": "How will tuition be funded?",
   "funnel.funding.hint":
     "ESA applications are made directly through the Iowa Department of Education. We will provide any documentation your application needs.",
+  /** Families outside Iowa (2026-11-09). Promises nothing the school cannot confirm. */
+  "funnel.funding.national.hint":
+    "School-choice funding (education savings accounts or scholarship programs) depends on your state and on the school's status there. We will confirm with you what, if anything, applies.",
+  "funnel.funding.national.esa.label":
+    "We would like to use a state school-choice program if one is available to us",
+  "funnel.funding.national.esa.description":
+    "Not guaranteed. Until the school confirms that a program applies in your state, the monthly contribution of ${monthlyContribution} per student is payable directly.",
   "funnel.funding.esa.label": "We intend to apply for Iowa ESA funding",
   "funnel.funding.esa.description":
     "Approximately ${esaEstimate} per student per year, paid by the State of Iowa.",
@@ -235,6 +246,8 @@ export const en = {
   "funnel.immunization.legend": "Immunization documentation",
   "funnel.immunization.hint":
     "Iowa law requires documentation of either immunization compliance or a valid exemption. Bring the paperwork to your intake meeting — nothing needs uploading here.",
+  "funnel.immunization.national.hint":
+    "Your state's law requires documentation of either immunization compliance or an exemption it recognizes. Bring the paperwork to your intake meeting — nothing needs uploading here.",
   "funnel.immunization.records": "Immunization records are available",
   "funnel.immunization.exemption": "A valid exemption is available",
 

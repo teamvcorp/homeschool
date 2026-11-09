@@ -162,6 +162,7 @@ const fam = newJar();
     ["/enroll/guardian", 'name="guardianEmail"', {
       guardianName: "Robert Von Der Becke",
       guardianAddress: "503 Lake Ave, Storm Lake, IA 50588",
+      guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
       guardianPhone: "712-560-1128",
       guardianEmail: `promote-test+${RUN_TAG}@example.com`,
       emergencyContactName: "",
@@ -346,6 +347,7 @@ if (studentId) {
         guardianEmail: `promote-test+${RUN_TAG}@example.com`,
         guardianPhone: "712-560-1128",
         guardianAddress: "503 Lake Ave, Storm Lake, IA 50588",
+        guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
         emergencyContactName: "",
         emergencyContactPhone: "",
         conditionsAndAllergies: "None",

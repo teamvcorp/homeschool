@@ -211,6 +211,7 @@ function idNear(body, name, prefix) {
     ["/enroll/guardian", 'name="guardianEmail"', {
       guardianName: "Alpha Guardian",
       guardianAddress: "503 Lake Ave, Storm Lake, IA 50588",
+      guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
       guardianPhone: "712-560-1128",
       guardianEmail: `admin-harness+${RUN_TAG}@example.com`,
       emergencyContactName: "Beta Guardian",

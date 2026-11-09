@@ -150,6 +150,10 @@ export const lo = {
   /* --- ຂັ້ນຕອນ 2: ພໍ່ແມ່ / ຜູ້ປົກຄອງ --- */
   "funnel.field.guardianName.label": "ຊື່ພໍ່ແມ່ / ຜູ້ປົກຄອງ",
   "funnel.field.guardianAddress.label": "ທີ່ຢູ່ອາໄສ",
+  /* NEW 2026-11-09 — unreviewed machine-assisted draft, same warning as the file header. */
+  "funnel.field.guardianState.label": "ລັດທີ່ທ່ານອາໄສຢູ່",
+  "funnel.field.guardianState.hint":
+    "ສິ່ງນີ້ກຳນົດວ່າສັນຍາການລົງທະບຽນສະບັບໃດໃຊ້ກັບທ່ານ ແລະ ທາງເລືອກດ້ານທຶນໃດທີ່ພວກເຮົາອະທິບາຍ.",
   "funnel.field.guardianPhone.label": "ເບີໂທຫຼັກ",
   "funnel.field.guardianEmail.label": "ອີເມວ",
   "funnel.field.guardianEmail.hint":
@@ -161,6 +165,12 @@ export const lo = {
   "funnel.funding.legend": "ຄ່າຮຽນຈະຊຳລະດ້ວຍວິທີໃດ?",
   "funnel.funding.hint":
     "ການສະໝັກ ESA ຕ້ອງເຮັດຜ່ານກະຊວງສຶກສາທິການລັດໄອໂອວາໂດຍກົງ. ພວກເຮົາຈະຈັດຫາເອກະສານທີ່ການສະໝັກຂອງທ່ານຕ້ອງການ.",
+  "funnel.funding.national.hint":
+    "ທຶນເລືອກໂຮງຮຽນ (ບັນຊີເງິນຝາກເພື່ອການສຶກສາ ຫຼື ໂຄງການທຶນການສຶກສາ) ຂຶ້ນກັບລັດຂອງທ່ານ ແລະ ສະຖານະຂອງໂຮງຮຽນໃນລັດນັ້ນ. ພວກເຮົາຈະຢືນຢັນກັບທ່ານວ່າມີຫຍັງໃຊ້ໄດ້ແດ່.",
+  "funnel.funding.national.esa.label":
+    "ພວກເຮົາຢາກໃຊ້ໂຄງການເລືອກໂຮງຮຽນຂອງລັດ ຖ້າມີໃຫ້ພວກເຮົາ",
+  "funnel.funding.national.esa.description":
+    "ບໍ່ໄດ້ຮັບປະກັນ. ຈົນກວ່າໂຮງຮຽນຈະຢືນຢັນວ່າມີໂຄງການໃຊ້ໄດ້ໃນລັດຂອງທ່ານ, ເງິນສົມທົບລາຍເດືອນ ${monthlyContribution} ຕໍ່ນັກຮຽນ ແມ່ນຈ່າຍໂດຍກົງ.",
   "funnel.funding.esa.label": "ພວກເຮົາຕັ້ງໃຈຈະສະໝັກທຶນ ESA ຂອງລັດໄອໂອວາ",
   "funnel.funding.esa.description":
     "ປະມານ ${esaEstimate} ຕໍ່ນັກຮຽນຕໍ່ປີ, ຈ່າຍໂດຍລັດໄອໂອວາ.",
@@ -180,6 +190,8 @@ export const lo = {
   "funnel.immunization.legend": "ເອກະສານການສັກຢາປ້ອງກັນ",
   "funnel.immunization.hint":
     "ກົດໝາຍລັດໄອໂອວາຕ້ອງການເອກະສານຢືນຢັນການສັກຢາປ້ອງກັນ ຫຼື ໃບຍົກເວັ້ນທີ່ຖືກຕ້ອງ. ກະລຸນານຳເອກະສານມາໃນວັນພົບປະເບື້ອງຕົ້ນ — ບໍ່ຈຳເປັນຕ້ອງອັບໂຫຼດຢູ່ນີ້.",
+  "funnel.immunization.national.hint":
+    "ກົດໝາຍຂອງລັດທ່ານຕ້ອງການເອກະສານຢືນຢັນການສັກຢາປ້ອງກັນ ຫຼື ໃບຍົກເວັ້ນທີ່ລັດຮັບຮູ້. ກະລຸນານຳເອກະສານມາໃນວັນພົບປະເບື້ອງຕົ້ນ — ບໍ່ຈຳເປັນຕ້ອງອັບໂຫຼດຢູ່ນີ້.",
   "funnel.immunization.records": "ພວກເຮົາມີບັນທຶກການສັກຢາປ້ອງກັນ",
   "funnel.immunization.exemption": "ພວກເຮົາມີໃບຍົກເວັ້ນທີ່ຖືກຕ້ອງ",
 

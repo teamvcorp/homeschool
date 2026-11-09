@@ -5,9 +5,9 @@ import Link from "next/link";
 import { submitEnrollmentAction } from "@/lib/actions/enrollment";
 import { idleState } from "@/lib/actions/types";
 import {
-  ACKNOWLEDGMENT_LIST,
-  AGREEMENT_PREAMBLE,
-  SIGNATURE_ATTESTATION,
+  AGREEMENTS,
+  acknowledgmentList,
+  type ConsentVersion,
 } from "@/lib/enrollment/agreement-text"; // text-only module — this is a Client Component
 import { TextInput, Checkbox, FormError } from "@/app/components/forms/Field";
 import { SubmitButton, AntiAbuseFields } from "@/app/components/forms/SubmitButton";
@@ -16,7 +16,7 @@ import { SubmitButton, AntiAbuseFields } from "@/app/components/forms/SubmitButt
  * The signature step.
  *
  * WHY TYPED NAME RATHER THAN A DRAWN SIGNATURE
- * Under the federal E-SIGN Act and Iowa UETA (Iowa Code ch. 554D), an electronic
+ * Under the federal E-SIGN Act and each state's UETA (Iowa: Iowa Code ch. 554D), an electronic
  * signature is valid on demonstrable INTENT TO SIGN plus ATTRIBUTION to the signer.
  * Neither depends on the signature looking like handwriting. A canvas squiggle adds
  * image storage, an accessibility problem for anyone using a keyboard or screen
@@ -28,9 +28,22 @@ import { SubmitButton, AntiAbuseFields } from "@/app/components/forms/SubmitButt
  * timestamp, IP, user agent, consent version, and a SHA-256 hash of the exact
  * agreement text shown here.
  */
-export default function SignPanel({ timestamp }: { timestamp: string }) {
+export default function SignPanel({
+  timestamp,
+  version,
+}: {
+  timestamp: string;
+  /**
+   * Which agreement to SHOW, chosen server-side from the family's state. Display only:
+   * the submit action re-derives the version from the validated draft and never trusts
+   * a value from the browser, so the text shown and the version recorded share one
+   * source (consentVersionForState) without the form carrying it.
+   */
+  version: ConsentVersion;
+}) {
   const [state, formAction] = useActionState(submitEnrollmentAction, idleState);
   const err = (name: string) => state.fieldErrors?.[name]?.[0];
+  const agreement = AGREEMENTS[version];
 
   return (
     <form action={formAction} className="relative flex flex-col gap-6" noValidate>
@@ -44,10 +57,10 @@ export default function SignPanel({ timestamp }: { timestamp: string }) {
           What you are agreeing to
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          {AGREEMENT_PREAMBLE}
+          {agreement.preamble}
         </p>
         <ol className="mt-4 flex list-decimal flex-col gap-2 pl-5">
-          {ACKNOWLEDGMENT_LIST.map((ack) => (
+          {acknowledgmentList(agreement).map((ack) => (
             <li key={ack.key} className="text-sm leading-relaxed text-ink">
               {ack.text}
             </li>
@@ -68,7 +81,7 @@ export default function SignPanel({ timestamp }: { timestamp: string }) {
         name="intentAffirmed"
         required
         error={err("intentAffirmed")}
-        label={SIGNATURE_ATTESTATION}
+        label={agreement.attestation}
       />
 
       <div className="mt-2 flex flex-wrap items-center gap-4">

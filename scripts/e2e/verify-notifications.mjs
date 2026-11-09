@@ -202,6 +202,7 @@ const GUARDIAN_EMAIL = `notify-test+${RUN_TAG}@example.com`;
     ["/enroll/guardian", 'name="guardianEmail"', {
       guardianName: "Notify Guardian",
       guardianAddress: "503 Lake Ave, Storm Lake, IA 50588",
+      guardianState: "IA", // Iowa → the as-filed 2026-08-01 agreement
       guardianPhone: "712-560-1128",
       guardianEmail: GUARDIAN_EMAIL,
       emergencyContactName: "",
