@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { school, addressLine, footerNav, yearsInStormLake, dailyApp } from "@/lib/site";
+import { school, addressLine, footerNav, dailyApp } from "@/lib/site";
 import { Wordmark } from "./ui/Crest";
 import { ButtonLink, ArrowIcon } from "./ui/Button";
 
@@ -155,11 +155,11 @@ export default function SiteFooter() {
             reserved.
           </p>
           <p className="text-xs text-navy-500">
-            {/* The IOWA figure, not the organisation's. The school has been in Storm
-                Lake since 2019; the corporation dates to 2012 in Florida. Pairing
-                `established` with the Iowa city here is what made this line false. */}
-            Serving {school.address.city}, Iowa since {school.inStormLakeSince} &middot;{" "}
-            {yearsInStormLake()} years in {school.address.county}
+            {/* National positioning first (`school.reach`), then the first campus as a
+                fact. The year is the IOWA figure, not the organisation's: the campus
+                opened in 2020; the corporation dates to 2012 in Florida. */}
+            {school.reach.short} &middot; First campus: {school.address.city},{" "}
+            {school.address.stateCode}, since {school.inStormLakeSince}
           </p>
         </div>
 

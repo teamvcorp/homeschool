@@ -29,10 +29,12 @@ const crestDataUri = `data:image/png;base64,${readFileSync(
 
 // Precomputed so each element below has exactly one text child.
 /**
- * The Iowa year, because it sits next to "Storm Lake, Iowa". The corporation's 2012
- * founding was in Florida — see the note on `established` in lib/site.ts.
+ * National positioning (2026-11-09) — `school.reach` in lib/site.ts. No year here on
+ * purpose: a "Since 2020" beside a national claim would read as nationwide since 2020,
+ * and pairing 2012 with anything location-based reopens the Florida/Iowa date trap
+ * described on `established`.
  */
-const eyebrow = `Storm Lake, Iowa · Since ${school.inStormLakeSince}`;
+const eyebrow = school.reach.short;
 const taglineLineOne = "We don’t lower the bar.";
 const taglineLineTwo = "We raise the student.";
 

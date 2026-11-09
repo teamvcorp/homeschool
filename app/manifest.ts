@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: `${school.dbaName} — ${school.legalName}`,
     short_name: school.dbaName,
-    description:
-      "A K–12 nonpublic school in Storm Lake, Iowa. Mastery-based progression, ABA-informed instruction, and an integrated Taekwondo discipline framework.",
+    // National positioning — see `school.reach` in lib/site.ts.
+    description: `Mastery-based K–12 education. ${school.reach.national}, with ${school.reach.campuses.toLowerCase()}.`,
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

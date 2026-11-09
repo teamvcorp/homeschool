@@ -70,8 +70,14 @@ check("GET /homeschool renders", page.status === 200, `status=${page.status}`);
 check("Page names the tier", page.body.includes("Homeschool at Home"));
 check("Page states the first-child price ($19.95)", page.body.includes("$19.95"));
 check("Page states the additional-child price ($10)", page.body.includes("$10"));
-// (?![\d.]) so the $200 full-enrollment figure in the comparison table does not match.
-check("Page no longer states the old $20 price", !/\$20(?![\d.])/.test(page.body));
+/**
+ * Searched in <main> ONLY. React's RSC payload (inline <script>) contains internal
+ * references like "$20" (a hex row id) that change between builds — a whole-document
+ * search failed on exactly that after an unrelated edit. (?![\d.]) keeps the $200
+ * full-enrollment figure in the comparison table from matching.
+ */
+const visibleMain = (page.body.match(/<main[\s>][\s\S]*?<\/main>/) ?? [""])[0];
+check("Page no longer states the old $20 price", !/\$20(?![\d.])/.test(visibleMain));
 
 /* ---------------- 2. THE ACCOUNT BOUNDARY: sign-up yes, login no ---------- */
 

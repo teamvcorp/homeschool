@@ -25,7 +25,8 @@ export default function Hero() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="flex flex-col gap-6">
             <Eyebrow>
-              {school.legalName} &middot; Storm Lake, Iowa
+              {/* National positioning comes from `school.reach` in lib/site.ts. */}
+              {school.legalName} &middot; {school.reach.short}
             </Eyebrow>
 
             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-navy-900 sm:text-5xl lg:text-6xl">
@@ -78,7 +79,9 @@ export default function Hero() {
               */}
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wider text-ink-subtle">
-                  In Storm Lake since
+                  {/* Still the Iowa year (see the comment above): the first campus
+                      opened in 2020. Relabelled so the strip no longer reads as local-only. */}
+                  First campus opened
                 </dt>
                 <dd className="mt-1 font-serif text-2xl font-bold text-navy-900">
                   {school.inStormLakeSince}
@@ -86,7 +89,7 @@ export default function Hero() {
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wider text-ink-subtle">
-                  Years here
+                  Years on campus
                 </dt>
                 <dd className="mt-1 font-serif text-2xl font-bold text-navy-900">
                   {yearsInStormLake()}

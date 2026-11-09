@@ -64,6 +64,32 @@ export const school = {
   /** The year the school OPENED in Storm Lake and began teaching Iowa families. */
   inStormLakeSince: 2020,
 
+  /**
+   * WHERE WE SERVE — the BRANDING line (decided 2026-11-09): online nationally, with
+   * local campuses opening as communities need them. Storm Lake is the FIRST campus,
+   * not the headline. Use these strings wherever the site says where it serves, instead
+   * of typing "Storm Lake, Iowa" into a hero, footer, or meta description.
+   *
+   * ⚠️  HONESTY LIMITS. Online, nationwide = Homeschool at Home (curriculum, teacher
+   * support, grading through the app). Full enrollment, the school day, and Iowa ESA are
+   * IN PERSON at a campus, and today there is exactly ONE. "Opening where communities
+   * need them" is a stated intent: never write "campuses" as if several exist.
+   *
+   * ⚠️  NOT FOR THE ACCREDITATION PACKET. lib/content/accreditation.tsx and /handbook
+   * describe the Iowa school as filed with the Iowa DE; they keep the Iowa wording.
+   * The street address (`address`) and the Iowa dates above are facts, not branding.
+   */
+  reach: {
+    /** The headline claim. */
+    national: "Online across the United States",
+    /** Intent, worded as intent. */
+    campuses: "Local campuses opening where communities need them",
+    /** The one campus that exists today. */
+    firstCampus: "Our first campus is in Storm Lake, Iowa",
+    /** One-line form for eyebrows and footers. */
+    short: "Online nationwide · Local campuses as needed",
+  },
+
   legalStatus: "Nonprofit Corporation — 501(c)(3)",
   headOfSchool: "Robert Von Der Becke",
 
@@ -76,9 +102,13 @@ export const school = {
     county: "Buena Vista County",
   },
 
-  /** Display form; `phoneHref` is the tel: form. */
-  phone: "(712) 560-1128",
-  phoneHref: "tel:+17125601128",
+  /**
+   * Display form; `phoneHref` is the tel: form. Change BOTH together.
+   * TEMPORARY (2026-11-09): (712) 638-5050 is in use until the school's new number is
+   * approved. Swap both fields here and every page, the footer, and JSON-LD follow.
+   */
+  phone: "(712) 638-5050",
+  phoneHref: "tel:+17126385050",
   email: "teamvcorp@thevacorp.com",
 
   gradeLevels: "Kindergarten through Grade 12, plus The VA Higher Institute (ages 16–18)",
@@ -582,7 +612,7 @@ export const homeschoolAtHome = {
   positioning:
     "A step between homeschooling alone and enrolling at The VA School. You keep teaching your own children; we hand you the curriculum, the standards, the app our students use, and a teacher who answers when you are stuck.",
   audience:
-    "Families who are not ready to enroll at the school in Storm Lake, including families too far away to attend daily.",
+    "Families anywhere in the United States who are homeschooling on their own and are not ready, or not near enough, to enroll at a VA School campus.",
 
   /**
    * PER-FAMILY PRICING: the first child costs more than each sibling. Two numbers, not

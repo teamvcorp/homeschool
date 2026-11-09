@@ -65,18 +65,23 @@ export const metadata: Metadata = {
     /** Page-level `title` values fill the %s. */
     template: `%s — ${school.dbaName}`,
   },
-  description:
-    "A K–12 nonpublic school in Storm Lake, Iowa. Mastery-based progression, ABA-informed instruction, and an integrated Taekwondo discipline framework. Serving Storm Lake families since 2019.",
+  /**
+   * NATIONAL POSITIONING (2026-11-09): online across the US, local campuses as needed.
+   * Wording comes from `school.reach` in lib/site.ts — see its honesty limits.
+   */
+  description: `Mastery-based K–12 education. ${school.reach.national}, with ${school.reach.campuses.toLowerCase()}. ABA-informed instruction and a standard every student is supported to reach.`,
   applicationName: school.dbaName,
   authors: [{ name: school.legalName }],
+  /** National keywords only, by decision on 2026-11-09 (local Iowa terms dropped). */
   keywords: [
-    "private school Storm Lake Iowa",
-    "K-12 nonpublic school Iowa",
+    "online homeschool curriculum",
+    "homeschool support United States",
+    "K-12 online curriculum",
+    "homeschool teacher support",
     "mastery-based learning",
+    "standards-based homeschool curriculum",
     "Applied Behavior Analysis school",
-    "Iowa ESA school choice",
-    "Taekwondo school Iowa",
-    "Buena Vista County private school",
+    "private K-12 school",
   ],
   openGraph: {
     type: "website",
@@ -84,13 +89,12 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: school.dbaName,
     title: `${school.dbaName} — ${school.tagline}`,
-    description:
-      "Mastery-based K–12 education in Storm Lake, Iowa. Every student held to the highest standard, with every support needed to reach it.",
+    description: `Mastery-based K–12 education, ${school.reach.national.toLowerCase()}. Every student held to the highest standard, with every support needed to reach it.`,
   },
   twitter: {
     card: "summary_large_image",
     title: `${school.dbaName} — ${school.tagline}`,
-    description: "Mastery-based K–12 education in Storm Lake, Iowa.",
+    description: `Mastery-based K–12 education, ${school.reach.national.toLowerCase()}.`,
   },
   robots: { index: true, follow: true },
 };
@@ -141,6 +145,11 @@ function StructuredData() {
       postalCode: school.address.zip,
       addressCountry: "US",
     },
+    /**
+     * National reach for search engines. The `address` above stays: it is the real,
+     * physical first campus, and a fake or missing address would be worse than local.
+     */
+    areaServed: { "@type": "Country", name: "United States" },
     founder: {
       "@type": "Person",
       name: school.headOfSchool,
