@@ -21,7 +21,7 @@ and the accreditation packet render from it, so they cannot disagree.
 | `/higher-institute` | Doc 7 | Premise, eligibility (§7.2), two-year framework (§7.3), four pathways (§7.4), dual enrollment (§7.5), completion (§7.6) |
 | `/admissions` | Doc 4 §4.2 | Who we serve, four-step process, non-discrimination, cohort placement |
 | `/tuition` | Doc 4 §4.3 | $200/month, Iowa ESA explainer, hardship, cross-link to `/homeschool` |
-| `/homeschool` | **No source document — deliberately outside the packet** | Homeschool at Home, the $20/month support tier. See below. |
+| `/homeschool` | **No source document — deliberately outside the packet** | Homeschool at Home, the support tier ($19.95 first child, $10 each additional; sign-up and billing in the app). See below. |
 | `/contact` | Doc 4 §4.1 | Address, phone, email, ways to get in touch |
 | `/enroll` | Doc 9 | Enrollment entry point (**interim** — Phase 4 replaces the body with the wizard) |
 | `/accreditation` | All | Packet index |
@@ -78,7 +78,7 @@ above and reverting it. It is not the same thing, and the difference is the whol
 | Who the family is | A prospective VA School student | An independent homeschooler under Iowa CPI; the school is **not** their school of record |
 
 The rule this obeys is rule 2 below: do not change a factual claim about the accredited
-school without checking the filed PDF. A $20/month service that is explicitly *not*
+school without checking the filed PDF. A $19.95/month service that is explicitly *not*
 enrollment, sold to families who are explicitly *not* students, makes no claim about the
 accredited school at all — so it needs no source document, and it must stay out of the
 packet until and unless Document 4 §4.3 is actually amended.

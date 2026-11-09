@@ -35,7 +35,7 @@ const HARNESSES = [
   ["verify-notifications.mjs", "family status emails, and the two that must NOT send"],
   ["verify-language.mjs", "the language toggle with no JavaScript, and its redirect guard"],
   ["verify-translate.mjs", "the language lens endpoint: guards, cache, and the agreement refusal"],
-  ["verify-homeschool.mjs", "the Homeschool at Home tier, its interest form, and the app-login boundary"],
+  ["verify-homeschool.mjs", "Homeschool at Home copy, the app sign-up link, and no login link"],
   /**
    * LAST, because it deliberately exhausts the per-email reset limit to prove a throttled
    * caller is indistinguishable from an unknown one. That counter is keyed to its own

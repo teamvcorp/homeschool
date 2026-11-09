@@ -196,9 +196,8 @@ export default function AdmissionsPage() {
           <Prose>
             <p>
               {homeschoolAtHome.monthlyFeeLabel}. You keep teaching at home, we supply the
-              curriculum, the app, a teacher to ask, and the grading — and your child can
-              train Taekwondo at the dojo if you are close enough to get here. Families
-              move up to full enrollment when they are ready, and many do.
+              curriculum, the app, a teacher to ask, and the grading. Families move up to
+              full enrollment when they are ready, and many do.
             </p>
           </Prose>
           <div className="mt-6">

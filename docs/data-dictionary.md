@@ -33,37 +33,31 @@ Source of record: `VA_School_Complete_Document_Package.pdf` (Iowa DE submission)
 | `taekwondoRanks` | Doc 6 Template D | Belt progression |
 | `instructors` | Doc 5 §5.3 | Instructor log + compliance |
 | `partnerships` | Doc 8 | Employer MOUs |
-| `inquiries` | Doc 4, Doc 5, **plus Homeschool at Home (no source doc)** | Tour / volunteer / partnership enquiries, and Homeschool at Home sign-ups |
+| `inquiries` | Doc 4, Doc 5, **plus Homeschool at Home (no source doc)** | Tour / volunteer / partnership enquiries, and **legacy** Homeschool at Home interest forms (none written since 2026-11-09) |
 | `auditLog` | Doc 6 §6.1 | Append-only access trail |
 | `rateLimits` | — | Abuse counters (TTL) |
 | `emailQueue` | — | Failed-send retry |
 | `authTokens` | — | Emailed capability links — reset / setup / resume (TTL) |
 | `translations` | — | Cached machine translations of public copy (deliberately no TTL) |
 
-### `inquiries` has a producer now
+### `inquiries` — the Homeschool at Home rows are legacy
 
-Until Homeschool at Home, nothing in this codebase ever wrote an inquiry — `/contact` was
-a set of `mailto:` links, and the collection, its `status_createdAt` index, the
-`inquiryNotificationEmail` template, and the `/api/email/retry` handler were all built with
-no caller. `lib/actions/inquiry.ts` is the first.
+From 2026-08 to 2026-11-09 the Homeschool at Home interest form (`lib/actions/inquiry.ts`,
+now deleted) was the only producer of inquiries. Sign-up for that tier then moved to the
+School Day app (app.vaschool.org/enroll, Stripe card billing) — see
+`remove-signup-from-vaschool-site.md`. **Nothing on this site writes inquiries now.** The
+collection, its `status_createdAt` index, `inquiryNotificationEmail`, and `/api/email/retry`
+remain for existing rows and for any future enquiry form.
 
-A `type: "homeschoolAtHome"` row is a **sales lead, not an application**. The family is an
-independent homeschooler under Iowa CPI; the school is not their school of record. Nothing
-may promote such a row into `students` or `enrollmentApplications`.
+Existing `type: "homeschoolAtHome"` rows are **sales leads, not applications**, and still
+render in `/admin/inquiries`. Nothing may promote such a row into `students` or
+`enrollmentApplications`. Their `details` keys are historical: `childCount`, `gradeLevels`,
+`nearestTown`, `taekwondoInterest`, `currentSituation`, `monthlyEstimate` (computed at the
+**old** `childCount × $20` — not a billing figure), `acknowledgedIndependentStatus`, `source`.
 
-Tier data rides in `details` (the document's "type-specific extras" field), so the schema
-did not change: `childCount`, `gradeLevels`, `nearestTown`, `taekwondoInterest`,
-`currentSituation`, `monthlyEstimate`, `acknowledgedIndependentStatus`, `source`.
-
-- `nearestTown` exists **only** to judge whether the family can reach the dojo for
-  in-person Taekwondo. It is a town, never a street address — this is a public
-  unauthenticated endpoint.
-- `monthlyEstimate` is precomputed (`childCount × 20`) because a human invoices from this
-  record, and making them re-derive it is how the wrong number gets billed.
-- **No medical data, ever.** A non-enrolled child training at the dojo does need a waiver,
-  an emergency contact, and allergy information — collected **in person at the first
-  visit**, deliberately not through this form. `MedicalInfo` stays confined to the
-  enrollment record for the reasons in the conventions above.
+Rule for any future producer: `details` is passed through to the inbox whole
+(`toInquiryListItem`), so **no medical data, street address, or date of birth** may go in
+it — or whitelist its keys in the DTO first.
 
 ## The critical boundary: applications ≠ students
 

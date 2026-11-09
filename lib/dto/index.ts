@@ -100,9 +100,12 @@ export interface InquiryListItem {
  *
  * `details` is passed through whole, which is a deliberate exception to the "a DTO never
  * contains a field the view does not render" rule — and it is safe only because of what
- * `details` is allowed to hold. It is free-form `Record<string, string>` written by
- * `lib/actions/inquiry.ts`, which puts a child count, grade levels, a TOWN, a Taekwondo
- * preference, and a precomputed monthly figure in it.
+ * `details` is allowed to hold. It is free-form `Record<string, string>`.
+ *
+ * LEGACY KEYS: the only producer so far was the Homeschool at Home interest form (removed
+ * 2026-11-09 — sign-up moved to the app). Its rows hold a child count, grade levels, a
+ * TOWN, a Taekwondo preference, and a monthly estimate at the OLD $20/child price. Those
+ * rows are still rendered here; treat the estimate as historical, not a billing figure.
  *
  * ⚠️  IF A FUTURE INQUIRY PRODUCER EVER PUTS SOMETHING SENSITIVE IN `details`, THIS
  * PASS-THROUGH BECOMES A LEAK. Nothing medical, no street address, and no date of birth

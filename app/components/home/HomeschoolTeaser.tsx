@@ -3,7 +3,7 @@ import { Section, SectionHeading } from "../ui/Section";
 import { ButtonLink, ArrowIcon } from "../ui/Button";
 
 /**
- * Homeschool at Home — the $20/month support tier, on the home page.
+ * Homeschool at Home — the support tier (from $19.95/month), on the home page.
  *
  * ⚠️  PLACEMENT IS AN ARGUMENT, AND IT IS DELIBERATE. This sits AFTER `TuitionTeaser`,
  * never before it. The home page sells the school first; this section catches the family
@@ -29,9 +29,7 @@ export default function HomeschoolTeaser() {
           />
           <p className="mt-6 max-w-2xl leading-relaxed text-ink-muted">
             {homeschoolAtHome.monthlyFeeLabel}. You keep teaching at home; we supply the
-            curriculum, the app our students use, a teacher to ask, and the grading — and
-            your child can train Taekwondo at the dojo if you are close enough to get here.
-            {" "}
+            curriculum, the app our students use, a teacher to ask, and the grading.{" "}
             {homeschoolAtHome.esaNote}
           </p>
           <ButtonLink href="/homeschool" variant="outline" className="mt-8">
@@ -45,10 +43,13 @@ export default function HomeschoolTeaser() {
             What it costs
           </p>
           <p className="mt-3 font-serif text-4xl font-bold text-navy-900">
-            ${homeschoolAtHome.monthlyFee}
+            {homeschoolAtHome.firstChildMonthlyLabel}
             <span className="ml-2 align-middle text-base font-medium text-ink-subtle">
-              per child / month
+              / month, first child
             </span>
+          </p>
+          <p className="mt-1 text-sm font-medium text-ink-muted">
+            + {homeschoolAtHome.additionalChildMonthlyLabel} / month for each additional child
           </p>
           <p className="mt-3 leading-relaxed text-ink-muted">
             {homeschoolAtHome.monthlyFeeNote}

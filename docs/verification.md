@@ -54,6 +54,7 @@ npm run build       # must pass with .env.local ABSENT (see the env trap below)
 | `scripts/e2e/verify-language.mjs` | The language toggle driven with no JavaScript, plus the `returnTo` redirect guard. |
 | `scripts/e2e/verify-translate.mjs` | The language lens endpoint: origin/length/locale guards, the agreement refusal, and the cache. |
 | `scripts/e2e/verify-password-reset.mjs` | Reset and change-password: enumeration resistance asserted by string equality, single-use / expiring / purpose-bound tokens, and the `sessionEpoch` bump that evicts sessions created before the reset. |
+| `scripts/e2e/verify-homeschool.mjs` | Read-only (GETs only). Homeschool at Home copy: new price ($19.95 / $10), a link to the app's sign-up (`app.vaschool.org/enroll`) and **no** app-login link inside `<main>`, no Taekwondo promise, no form on `/homeschool`. Also checks `/`, `/tuition`, `/admissions`. Header/footer legitimately link the login for enrolled families, so the login check is scoped to `<main>` (it failed on the whole page before 2026-11-09). That `/homeschool` is static is checked in the build table (○), not here. |
 | `scripts/check-agreement-hash.ts` | Pins the agreement's SHA-256 so no change to the signed wording can pass unnoticed. |
 
 ## The database rule

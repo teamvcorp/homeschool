@@ -83,7 +83,7 @@ export default function TuitionPage() {
 
           ⚠️  DELIBERATELY ITS OWN SUBORDINATE SECTION, NOT A THIRD CARD IN THE HEADLINE
           GRID ABOVE. Making that grid `lg:grid-cols-3` would shrink the $200 and ESA
-          display numbers and visually equate a $20 support SERVICE with accredited-school
+          display numbers and visually equate a $19.95 support SERVICE with accredited-school
           tuition governed by Document 4 §4.3. The placement is the message: a family
           reading about enrollment costs must learn the cheaper option exists, without the
           page implying the two are the same kind of thing. */}
@@ -91,8 +91,7 @@ export default function TuitionPage() {
         <div className="max-w-3xl">
           <Callout title="Not ready to enroll yet?">
             <p>
-              {homeschoolAtHome.summary} {homeschoolAtHome.monthlyFeeLabel}, with
-              Taekwondo at the dojo for families close enough to attend.
+              {homeschoolAtHome.summary} {homeschoolAtHome.monthlyFeeLabel}.
             </p>
             <p className="mt-3">{homeschoolAtHome.esaNote}</p>
             <p className="mt-4">

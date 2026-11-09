@@ -97,67 +97,60 @@ export const addressLine = `${school.address.street}, ${school.address.city}, ${
  * ─────────────────────────────────────────────────────────────────────────────
  * THE DIVISION OF INTENT (stated by the school, and load-bearing)
  *
- *   THIS SITE          → ENROLLMENT AND SIGN-UP ONLY. Public information, the funnel that
- *                        turns a prospective family into a signed agreement, the Homeschool
- *                        at Home interest form, and the staff-side admin needed to act on
- *                        both.
- *   app.vaschool.org   → EVERYTHING FOR FAMILIES WHO ALREADY HAVE AN ACCOUNT. Daily
- *                        check-in, the school day, and student progress. Its own
- *                        deployment, its own login; shares no routes with us (every route
- *                        here 404s there).
+ *   THIS SITE          → PUBLIC INFORMATION AND FULL ENROLLMENT. The funnel that turns a
+ *                        prospective family into a signed agreement, and the staff-side
+ *                        admin needed to act on it. For Homeschool at Home it only
+ *                        DESCRIBES the tier and LINKS to the app's own sign-up.
+ *   app.vaschool.org   → EVERYTHING FOR FAMILIES WITH AN ACCOUNT, plus self-service
+ *                        Homeschool at Home sign-up and card billing (/enroll there).
+ *                        Its own deployment, its own login; shares no routes with us.
  *
  * The point of the split is that each site has ONE obvious job, so neither audience has to
  * work out which one they need.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * THERE ARE NOW THREE AUDIENCES, AND THE THIRD IS WHY THIS COMMENT CHANGED.
+ * THREE AUDIENCES (rewritten 2026-11-09, see docs/remove-signup-from-vaschool-site.md)
  *
- *   1. PROSPECTIVE families            — no account. Send them to /enroll.
- *   2. ENROLLED families               — have an account. Send them to the app.
- *   3. HOMESCHOOL AT HOME subscribers  — the app IS the product they are buying
- *                                        ($20/month, see `homeschoolAtHome` below), but
- *                                        their account is created BY THE SCHOOL after
- *                                        sign-up and manual billing setup.
+ *   1. PROSPECTIVE families            — no account. Send them to OUR /enroll.
+ *   2. ENROLLED families               — have an account, CREATED BY THE SCHOOL after
+ *                                        promotion. Send them to the app (`loginUrl`).
+ *   3. HOMESCHOOL AT HOME families     — create their OWN account and pay by card in the
+ *                                        app. Send them to `signupUrl`, never `loginUrl`.
  *
- * Audience 3 did not exist when this rule was written, and it looks like an exception.
- * IT IS NOT. The rule was always about ACCOUNTS, not about enrollment status, and it
- * stands unchanged:
+ * Rules that still hold:
  *
  *  - Never promise an enrolled family anything on this site. An earlier draft of the home
  *    page said records would "move here" — exactly the blurring this division exists to
  *    prevent.
- *  - NEVER SEND ANYONE WITHOUT AN ACCOUNT TO app.vaschool.org. They have no account, and a
- *    login wall is the worst possible answer to "I want to sign up". Every link to it
- *    carries a "Not enrolled yet?" escape hatch back to /enroll.
- *
- * ⚠️  THE CONSEQUENCE FOR /homeschool, AND IT IS EASY TO GET WRONG: that page SELLS the
- * School Day app and must therefore NAME it, describe it, and say what it does — but it
- * must NOT link `loginUrl`, and must NOT render a "Sign in" button. A family reading the
- * sales page has not signed up yet and has no account. Its only call to action is the
- * interest form. After sign-up the school creates the account and sends credentials by
- * email, which is the moment that family legitimately becomes audience 2 for link
- * purposes. `scripts/e2e/verify-homeschool.mjs` asserts the absence of that link.
+ *  - A visitor without an account must never land on a LOGIN WALL. That is why /homeschool
+ *    links `signupUrl` (a page that creates the account) and not `loginUrl`.
+ *    `scripts/e2e/verify-homeschool.mjs` asserts both halves of that.
+ *  - The two `/enroll` routes are different things: ours is the legally signed enrollment
+ *    agreement; the app's is the Homeschool at Home subscription. Never cross-link them.
  */
 export const dailyApp = {
   url: "https://app.vaschool.org",
   loginUrl: "https://app.vaschool.org/login",
+  /**
+   * Homeschool at Home self-service sign-up (account + Stripe card billing), owned by the
+   * app. The ONLY app URL a visitor without an account may be sent to.
+   */
+  signupUrl: "https://app.vaschool.org/enroll",
   name: "School Day app",
   /** One line, used wherever the link appears. */
   purpose: "Daily check-in and the school day",
   /**
-   * ⚠️  WIDENED, NOT LOOSENED. "Anyone with an account" rather than "already-enrolled",
-   * because Homeschool at Home subscribers get real accounts without being enrolled
-   * students. The gate is an ACCOUNT, and only the school creates one.
+   * "Anyone with an account" rather than "already-enrolled": enrolled families get an
+   * account from the school; Homeschool at Home families create their own in the app.
    */
   audience:
-    "Anyone with an account — enrolled students and parents, and Homeschool at Home families",
+    "Anyone with an account — enrolled students and parents, and Homeschool at Home families who signed up in the app",
   /**
-   * What a Homeschool at Home family gets, for use on /homeschool where the app is the
-   * product being DESCRIBED rather than a destination being linked. Kept as its own field
-   * so nobody reaches for `loginUrl` on that page.
+   * What a Homeschool at Home family gets, for use on /homeschool. Kept as its own field
+   * so nobody reaches for `loginUrl` on that page — the link there is `signupUrl`.
    */
   homeschoolAccess:
-    "Homeschool at Home families use this same app. Accounts are created by the school after sign-up — there is nothing to log in to until we set yours up.",
+    "Homeschool at Home families use this same app. Sign up at app.vaschool.org/enroll — you create your account and pay online.",
 } as const;
 
 /**
@@ -567,16 +560,19 @@ export const tuition = {
    accreditation.tsx, lib/validation/enrollment.ts, or app/(marketing)/enroll/**.
    If one of those files needs a value from here, the answer is no.
 
-   Billing is MANUAL AND OFFLINE, exactly like the $200 tier. There is no payment code
-   in this repo and this feature adds none: the public surface announces the tier and
-   captures interest, and a human takes it from there.
+   SIGN-UP AND BILLING LIVE IN THE APP, NOT HERE (since 2026-11-09). A family creates
+   their own account at `dailyApp.signupUrl` and pays by card through Stripe there. This
+   site only DESCRIBES the tier and LINKS to that page — it holds no payment code, no
+   sign-up form, and no account creation for this tier. The prices below are display
+   copy that must match what the app charges; the app is the source of truth for billing.
+   History: docs/remove-signup-from-vaschool-site.md.
    ========================================================================== */
 
 export const homeschoolAtHome = {
   name: "Homeschool at Home",
   /** One line, for nav descriptions and card subtitles. */
   summary:
-    "Standards-based curriculum, teacher support, grading help, and Taekwondo — for families homeschooling on their own.",
+    "Standards-based curriculum, teacher support, and grading help — for families homeschooling on their own.",
 
   /**
    * WHO THIS IS FOR, stated as the school states it: a step between, not a destination.
@@ -584,13 +580,23 @@ export const homeschoolAtHome = {
    * `stepUp` block below is that argument in structured form.
    */
   positioning:
-    "A step between homeschooling alone and enrolling at The VA School. You keep teaching your own children; we hand you the curriculum, the standards, the app our students use, a teacher who answers when you are stuck — and a place in the dojo.",
+    "A step between homeschooling alone and enrolling at The VA School. You keep teaching your own children; we hand you the curriculum, the standards, the app our students use, and a teacher who answers when you are stuck.",
   audience:
     "Families who are not ready to enroll at the school in Storm Lake, including families too far away to attend daily.",
 
-  monthlyFee: 20,
-  monthlyFeeLabel: "$20 per child per month",
-  monthlyFeeNote: "Billed monthly. No contract, no enrollment, cancel by telling us.",
+  /**
+   * PER-FAMILY PRICING: the first child costs more than each sibling. Two numbers, not
+   * one, so nobody multiplies a single "per child" fee by a child count again — that was
+   * the old (now wrong) estimate. These are DISPLAY values; the app's Stripe prices are
+   * what a family is actually charged, so change both together.
+   */
+  firstChildMonthly: 19.95,
+  additionalChildMonthly: 10,
+  /** Pre-formatted so JSX never formats money itself ("$19.95", not "$19.950"). */
+  firstChildMonthlyLabel: "$19.95",
+  additionalChildMonthlyLabel: "$10",
+  monthlyFeeLabel: "$19.95 per month for the first child, $10 for each additional child",
+  monthlyFeeNote: "Billed monthly by card. No contract — cancel any time from the app.",
 
   /**
    * ⚠️  SAY THIS EVERY TIME THE PRICE APPEARS. Iowa ESA money follows an ENROLLED
@@ -605,11 +611,9 @@ export const homeschoolAtHome = {
    * THE LEGAL POSITION, in plain words. This is the sentence that keeps the tier
    * honest: the family remains the responsible party under Iowa CPI.
    *
-   * ⚠️  RENDER THIS AS A <p> IMMEDIATELY ABOVE THE ACKNOWLEDGMENT CHECKBOX on the
-   * interest form, not as the checkbox label. The Language Lens cannot translate text
-   * inside a <label> (see app/components/LanguageLens.tsx), and a Spanish- or
-   * Lao-reading family must not be asked to confirm a legal responsibility they were
-   * shown only in English.
+   * Render it as body text (<p>/Callout), never only inside a <label>: the Language Lens
+   * cannot translate text inside a <label> (see app/components/LanguageLens.tsx), and a
+   * Spanish- or Lao-reading family must be able to read it.
    */
   independenceStatement:
     "You remain an independent homeschooling family under Iowa's Competent Private Instruction law. You are responsible for your own reporting to your district or to the state. The VA School is not your student's school of record and does not report on your behalf.",
@@ -618,7 +622,7 @@ export const homeschoolAtHome = {
     {
       title: "The School Day app",
       detail:
-        "The same app our enrolled students use each day — assignments, progress, and the daily rhythm. We create your account after sign-up.",
+        "The same app our enrolled students use each day — assignments, progress, and the daily rhythm. You create your account and pay online; your children can start the same day.",
     },
     {
       title: "Standards-based curriculum",
@@ -636,40 +640,17 @@ export const homeschoolAtHome = {
         "We grade the work you send and tell you plainly what your child has mastered and what needs another pass.",
     },
     {
-      title: "Taekwondo at the dojo",
-      detail:
-        "Physical education in person at Storm Lake, training alongside our enrolled students. Included at no extra cost — subject to travel distance and class space.",
-    },
-    {
       title: "Mastery-based progress records",
       detail:
         "Skill-level records you can keep, so you can see progression rather than guess at it.",
     },
   ],
 
-  /**
-   * IN-PERSON TAEKWONDO — the one part of this tier that happens in our building.
-   *
-   * ⚠️  NEVER STATE THIS UNCONDITIONALLY. This tier is explicitly sold to families too
-   * far from Storm Lake to attend daily, so a flat "Taekwondo included" promises
-   * something we cannot deliver to a family three hours away, or into a class that is
-   * already full. EVERY rendering of this block must carry `availability` alongside it.
-   *
-   * ⚠️  PAPERWORK IS OFFLINE AND IN PERSON, BY DESIGN. A child who is not an enrolled
-   * student, training on our floor, needs a liability waiver, an emergency contact, and
-   * allergy/medical information. That is signed at the first visit — NOT collected
-   * through the public interest form. Minors' medical data does not belong on an
-   * unauthenticated public endpoint: see MedicalInfo in lib/db/types.ts, which is kept
-   * out of list projections, emails, and logs for exactly that reason.
+  /*
+   * NO TAEKWONDO IN THIS TIER (since 2026-11-09). It used to include in-person Taekwondo
+   * at the dojo; the tier is now academics only, and Taekwondo is for enrolled students.
+   * Do not reintroduce a dojo promise here without the app's pricing changing too.
    */
-  inPersonTaekwondo: {
-    headline: "Physical education, in person, at the dojo",
-    body: "Taekwondo is how this school does PE, and Homeschool at Home families are welcome on the floor. Your child trains in the same dojo as our enrolled students, with the same instructors and the same belt standard — at no additional cost.",
-    availability:
-      "Subject to travel distance and class space. Tell us where you live and we will tell you honestly whether it works. Families outside driving range get everything else in this tier, and no Taekwondo.",
-    beforeFirstClass:
-      "Before a first class we need a signed liability waiver, an emergency contact, and any allergy or medical information. That is done in person at the school — there is nothing to fill in online.",
-  },
 
   /**
    * THE HONEST LIST. This exists so a family cannot be surprised later, and because a
@@ -695,7 +676,7 @@ export const homeschoolAtHome = {
     {
       title: "No cohort, no school day",
       detail:
-        "The cohort group and the full instructional day in Storm Lake are part of enrollment. Taekwondo is the one part of campus life open to this tier.",
+        "The cohort group, the full instructional day in Storm Lake, and Taekwondo are part of enrollment. Campus life is for enrolled students.",
     },
     {
       title: "Reporting stays with you",
@@ -719,7 +700,6 @@ export const homeschoolAtHome = {
     body: "Most families who start here are testing whether our way of teaching fits their child. When the answer is yes, the next step is enrollment at the school in Storm Lake: the full day, the cohort, the diploma, and Iowa ESA funding that usually makes it cost less out of pocket than families expect.",
     signals: [
       "Your child is thriving in the curriculum and you want the cohort around them.",
-      "Taekwondo has become the best part of the week and you want the rest of it.",
       "You want a diploma, a transcript, and a graduation standard behind the work.",
       "You want Iowa ESA funding, which requires enrollment at an accredited school.",
       "The teaching day has become more than you want to carry alone.",
@@ -745,7 +725,7 @@ export const homeschoolAtHome = {
   comparisonRows: [
     {
       label: "Monthly cost",
-      values: ["$20 per child", `$${tuition.monthlyContribution} per student`],
+      values: ["$19.95 first child, $10 each additional", `$${tuition.monthlyContribution} per student`],
     },
     { label: "Iowa ESA funding", values: ["Not eligible", tuition.esaEstimateLabel] },
     { label: "Who teaches", values: ["You do", "Our instructors do"] },
@@ -758,10 +738,7 @@ export const homeschoolAtHome = {
     { label: "School Day app", values: ["Included", "Included"] },
     {
       label: "Taekwondo",
-      values: [
-        "Included — at the dojo, if you are close enough and there is space",
-        "Required, and part of every day",
-      ],
+      values: ["Not included", "Required, and part of every day"],
     },
     { label: "Cohort & school day", values: ["Not included", "Included — Storm Lake"] },
     { label: "Diploma & transcript", values: ["No", "Yes — earned by mastery"] },
@@ -1070,7 +1047,7 @@ export const navigation: readonly NavItem[] = [
       {
         label: "Homeschool at Home",
         href: "/homeschool",
-        description: "$20/month support for families homeschooling on their own",
+        description: "From $19.95/month for families homeschooling on their own",
       },
     ],
   },

@@ -23,8 +23,9 @@ const STATUS_STYLES: Record<string, string> = {
 /**
  * The inquiry inbox.
  *
- * WHY THIS PAGE EXISTS: the Homeschool at Home interest form is the first thing in this
- * codebase that writes an `inquiries` row. Without a screen, every submission would be
+ * WHY THIS PAGE EXISTS: the Homeschool at Home interest form was the first thing in this
+ * codebase that wrote an `inquiries` row. That form was removed on 2026-11-09 (sign-up
+ * moved to app.vaschool.org/enroll), but its rows remain and must stay readable here. Without a screen, every submission would be
  * invisible — the dashboard's "Open inquiries" count would climb forever, nothing could
  * move a row off `status: "new"`, and the only copy of a family's details would be one
  * notification email. A sales lead that lives only in an inbox is a sales lead that gets
@@ -78,9 +79,9 @@ export default async function InquiriesPage({
       >
         <h1 className="font-serif text-3xl font-bold text-navy-900">Inquiries</h1>
         <p className="mt-2 leading-relaxed text-ink-muted">
-          Tours, volunteers, partnerships, and Homeschool at Home sign-ups. None of these
-          is an enrollment application — a Homeschool at Home family is an independent
-          homeschooler, not a student here.
+          Tours, volunteers, partnerships, and legacy Homeschool at Home interest forms.
+          None of these is an enrollment application. New Homeschool at Home families sign
+          up and pay in the School Day app, not here.
         </p>
 
         {/* Status filter */}
@@ -118,8 +119,8 @@ export default async function InquiriesPage({
               No inquiries {activeStatus ? `with status "${activeStatus}"` : "yet"}
             </h2>
             <p className="mx-auto mt-2 max-w-md leading-relaxed text-ink-muted">
-              Homeschool at Home sign-ups appear here, and you will also receive an email
-              for each one.
+              Legacy Homeschool at Home interest forms appear here. New sign-ups for that
+              tier happen in the School Day app.
             </p>
           </div>
         ) : (

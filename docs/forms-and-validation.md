@@ -45,9 +45,10 @@ So the checks are deliberately asymmetric:
 | Submit — *attempt* | ✓ | ✓ | ✓ | **yes (2s)** | 30/hr per IP |
 | Submit — *stored application* | — | — | — | — | 10/hr per IP, 8/day per email |
 | Outbound enrollment email | — | — | — | — | 40/day globally (never rejects a family) |
-| Homeschool at Home interest | ✓ | ✓ | ✓ | **no** | 10/hr per IP, 5/day per email |
+| ~~Homeschool at Home interest~~ (removed 2026-11-09) | ✓ | ✓ | ✓ | **no** | 10/hr per IP, 5/day per email |
 
-The interest form (`lib/actions/inquiry.ts`) skips the fill-time floor for the same reason
+**The interest form was removed on 2026-11-09** — Homeschool at Home sign-up moved to the
+app. Its reasoning is kept below for the next public enquiry form. It skipped the fill-time floor for the same reason
 a wizard step does: it opens with name, email and phone — the exact autofill-prone shape
 of the 2026-08-05 incident — and nothing gates it, so there is no review page to read and
 no legal name to type. A two-second submit there is a family with autofill, not a script.
@@ -135,8 +136,9 @@ export const dynamic = "force-dynamic";
 ```
 
 The enrollment wizard never hit this because reading the draft cookie already makes
-`/enroll/[step]` dynamic. `/homeschool` is the first form on a *marketing* page, which has
-no such accident to save it. Any future one needs the same line.
+`/enroll/[step]` dynamic. `/homeschool` was the first form on a *marketing* page, which had
+no such accident to save it. Any future one needs the same line. (That form has since been
+removed and `/homeschool` is static again — its sign-up lives in the app.)
 
 ## `timestamp forged` — the secret is the other suspect
 

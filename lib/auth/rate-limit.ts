@@ -182,10 +182,10 @@ export const RATE_LIMITS = {
   ENROLLMENT_EMAIL_GLOBAL_PER_DAY: { limit: 40, windowSeconds: 24 * 60 * 60 },
 
   /**
-   * The public enquiry forms, per IP. FINALLY IN USE — this was dead config from the day
-   * it was written until the Homeschool at Home interest form became the first thing in
-   * this codebase that actually WRITES an inquiry. (Until then /contact was a set of
-   * mailto: links, and this constant protected nothing.)
+   * The public enquiry forms, per IP. KEPT FOR THE NEXT ENQUIRY FORM. Its only consumer,
+   * the Homeschool at Home interest form, was removed on 2026-11-09 when sign-up moved to
+   * the app, so this is currently unused. The reasoning below still holds for any future
+   * public enquiry form (tour, volunteer), so keep it rather than re-deriving it.
    *
    * 10/hour is generous on purpose. At this school's volume a genuine burst is a family
    * submitting twice because they were not sure the first one went through, plus a second
@@ -202,7 +202,7 @@ export const RATE_LIMITS = {
    * from rotating IPs.
    *
    * 5/day rather than the enrollment path's 8. That number exists to clear a large family
-   * enrolling every child in one sitting, which is a per-STUDENT action. This form is
+   * enrolling every child in one sitting, which is a per-STUDENT action. An enquiry form is
    * per-FAMILY — one submission covers every child — so a second and third attempt are a
    * correction or a follow-up, and a fifth is a phone call.
    *

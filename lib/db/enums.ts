@@ -261,11 +261,13 @@ export const INQUIRY_TYPES = [
   "volunteer",
   "employerPartnership",
   /**
-   * The $20/month support tier — see `homeschoolAtHome` in lib/site.ts.
+   * LEGACY — Homeschool at Home interest forms, written before 2026-11-09. Sign-up for
+   * that tier now happens in the app (app.vaschool.org/enroll) and nothing on this site
+   * writes this type any more. KEPT so existing rows still validate and render in the
+   * admin inbox — do not remove it while such rows exist.
    *
-   * NOT an enrollment. A row with this type means a family who homeschools
-   * independently wants to buy curriculum, teacher support, and grading help. Nothing
-   * downstream may promote it into `students` or `enrollmentApplications`.
+   * NOT an enrollment. Nothing downstream may promote it into `students` or
+   * `enrollmentApplications`.
    */
   "homeschoolAtHome",
 ] as const;
