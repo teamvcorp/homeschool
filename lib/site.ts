@@ -139,7 +139,7 @@ export const addressLine = `${school.address.street}, ${school.address.city}, ${
  * work out which one they need.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * THREE AUDIENCES (rewritten 2026-11-09, see docs/remove-signup-from-vaschool-site.md)
+ * THREE AUDIENCES (rewritten 2026-11-09, see commit f5d487b)
  *
  *   1. PROSPECTIVE families            — no account. Send them to OUR /enroll.
  *   2. ENROLLED families               — have an account, CREATED BY THE SCHOOL after
@@ -595,7 +595,7 @@ export const tuition = {
    site only DESCRIBES the tier and LINKS to that page — it holds no payment code, no
    sign-up form, and no account creation for this tier. The prices below are display
    copy that must match what the app charges; the app is the source of truth for billing.
-   History: docs/remove-signup-from-vaschool-site.md.
+   History: commit f5d487b ("Move Homeschool at Home sign-up to the app").
    ========================================================================== */
 
 export const homeschoolAtHome = {

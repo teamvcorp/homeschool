@@ -4,7 +4,7 @@
  *
  * HISTORY: until 2026-11-09 this harness drove an interest form on /homeschool (honeypot,
  * stored inquiry, a monthly estimate at $20/child). Sign-up and card billing moved to the
- * School Day app (app.vaschool.org/enroll) — see docs/remove-signup-from-vaschool-site.md —
+ * School Day app (app.vaschool.org/enroll) — see commit f5d487b —
  * so the form was deleted and this harness now asserts the NEW contract:
  *
  *   1. The new price copy ($19.95 first child, $10 each additional) — and the old

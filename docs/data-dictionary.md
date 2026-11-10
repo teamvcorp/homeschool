@@ -45,7 +45,7 @@ Source of record: `VA_School_Complete_Document_Package.pdf` (Iowa DE submission)
 From 2026-08 to 2026-11-09 the Homeschool at Home interest form (`lib/actions/inquiry.ts`,
 now deleted) was the only producer of inquiries. Sign-up for that tier then moved to the
 School Day app (app.vaschool.org/enroll, Stripe card billing) — see
-`remove-signup-from-vaschool-site.md`. **Nothing on this site writes inquiries now.** The
+commit `f5d487b`. **Nothing on this site writes inquiries now.** The
 collection, its `status_createdAt` index, `inquiryNotificationEmail`, and `/api/email/retry`
 remain for existing rows and for any future enquiry form.
 
